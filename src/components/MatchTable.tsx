@@ -121,13 +121,15 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
     const isLive = m.status === "live" || m.status === "break";
     const isFinished = m.status === "finished";
 
+    const hasPolish = isTeamAPolish || isTeamBPolish;
+
     return (
       <Link
         key={m.id}
         href={`/tournaments/${m.tournamentId}`}
         className={`block px-3 py-2.5 transition-colors ${
-          isLive ? "bg-red-50/40 hover:bg-red-50" : "hover:bg-slate-50"
-        }`}
+          hasPolish ? "polish-row" : ""
+        } ${isLive ? "bg-red-50/40 hover:bg-red-50" : "hover:bg-slate-50"}`}
       >
         {/* Top row: M# / time / phase / status */}
         <div className="flex items-center justify-between mb-1.5">
@@ -163,7 +165,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
           <div className="min-w-0 flex-1 flex items-center justify-end gap-1.5">
             <div
               className={`min-w-0 text-right text-xs leading-tight ${
-                isTeamAPolish ? "text-red-700 font-extrabold" : "text-slate-900"
+                "text-slate-900"
               } ${m.winner === "A" ? "font-bold text-slate-950" : "font-medium"}`}
             >
               {renderPlayerLines(m.teamA)}
@@ -181,7 +183,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
             <CountryFlag code={m.teamB.countryCode} className="text-sm shrink-0" />
             <div
               className={`min-w-0 text-xs leading-tight ${
-                isTeamBPolish ? "text-red-700 font-extrabold" : "text-slate-900"
+                "text-slate-900"
               } ${m.winner === "B" ? "font-bold text-slate-950" : "font-medium"}`}
             >
               {renderPlayerLines(m.teamB)}
@@ -263,7 +265,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
           <div className="flex items-center justify-end gap-1.5">
             <span
               className={`truncate max-w-[140px] sm:max-w-[220px] ${
-                isTeamAPolish ? "text-red-700 font-extrabold" : "text-slate-900"
+                "text-slate-900"
               } ${m.winner === "A" ? "font-bold text-slate-950" : ""}`}
             >
               {m.teamA.name}
@@ -292,7 +294,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
             <CountryFlag code={m.teamB.countryCode} className="text-sm" />
             <span
               className={`truncate max-w-[140px] sm:max-w-[220px] ${
-                isTeamBPolish ? "text-red-700 font-extrabold" : "text-slate-900"
+                "text-slate-900"
               } ${m.winner === "B" ? "font-bold text-slate-950" : ""}`}
             >
               {m.teamB.name}
