@@ -1,0 +1,45 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+build/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# editor
+.vscode/
+.idea/
+
+# logs
+*.log
+
+# wordpress plugin artifacts (not part of next.js app)
+vendor/
+beach-volley-results.php
+uninstall.php
+test-*.php
+debug-*.php
+claude-code-workflow.md
+beach-volley-results-prompt.md
