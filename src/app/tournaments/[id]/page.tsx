@@ -10,7 +10,7 @@ import { groupByDraw } from "@/lib/fivb/phases";
 
 /** Tiers whose results are published as qualification + main draw sections. */
 const PHASED_TIERS = new Set(["Elite16", "Challenge", "Futures", "Finals", "WorldChamps"]);
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -73,14 +73,8 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
       {/* Compact Header */}
       {tournament && (
-        <div className="bg-white p-3 sm:p-4 rounded-lg border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="bg-white p-3 sm:p-4 rounded-lg border border-slate-200 shadow-xs">
           <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-800 border border-slate-200">
-                {tournament.tier}
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">ID: {tournament.no}</span>
-            </div>
             <h1 className="text-base sm:text-lg font-black text-slate-900">{tournament.title}</h1>
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-0.5">
               <span className="flex items-center gap-1 font-medium">
@@ -96,15 +90,6 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <span>Gender: {tournament.gender === "M" ? "Men" : tournament.gender === "W" ? "Women" : "M & W"}</span>
             </div>
           </div>
-
-          <button
-            onClick={() => fetchDetail(true)}
-            disabled={isRefreshing}
-            className="p-1.5 rounded hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer disabled:opacity-50 self-start md:self-auto"
-            title="Refresh matches"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-          </button>
         </div>
       )}
 

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { LiveCenterData, Match } from "@/lib/fivb/types";
 import { matchProminenceRank } from "@/lib/fivb/prominence";
 import { MatchTable } from "@/components/MatchTable";
-import { Radio, RefreshCw } from "lucide-react";
+import { Radio } from "lucide-react";
 
 export default function LiveCenterPage() {
   const [data, setData] = useState<LiveCenterData | null>(null);
@@ -66,15 +66,6 @@ export default function LiveCenterPage() {
             </p>
           </div>
         </div>
-
-        <button
-          onClick={() => fetchLive(true)}
-          disabled={isRefreshing}
-          className="p-1.5 rounded hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer disabled:opacity-50 self-start sm:self-auto"
-          title="Refresh results"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-        </button>
       </div>
 
       {error && (
