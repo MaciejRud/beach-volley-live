@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { LiveCenterData } from "@/lib/fivb/types";
+import { LiveCenterData, Match } from "@/lib/fivb/types";
+import { matchProminenceRank } from "@/lib/fivb/prominence";
 import { MatchTable } from "@/components/MatchTable";
 import { Radio, RefreshCw } from "lucide-react";
 
@@ -41,8 +42,11 @@ export default function LiveCenterPage() {
   const liveMatches = data?.liveMatches || [];
   const breakMatches = data?.breakMatches || [];
   const upcomingToday = data?.upcomingToday || [];
-  const inProgress = [...liveMatches, ...breakMatches];
-  const allCurrent = [...inProgress, ...upcomingToday];
+  // Beach Pro Tour and the senior European Championship surface first; national
+  // tours keep their place further down rather than being hidden.
+  const byProminence = (a: Match, b: Match) => matchProminenceRank(a) - matchProminenceRank(b);
+  const inProgress = [...liveMatches, ...breakMatches].sort(byProminence);
+  const allCurrent = [...inProgress, ...[...upcomingToday].sort(byProminence)];
 
   return (
     <div className="space-y-4">

@@ -60,7 +60,6 @@ export default function CalendarHomePage() {
   const activePolishCount =
     (polishSummary?.activeMatches?.length || 0) + (polishSummary?.upcomingMatches?.length || 0);
 
-  const runningCount = tournaments.filter((t) => t.status === "running").length;
   const upcomingCount = tournaments.filter((t) => t.status === "upcoming").length;
 
   return (
@@ -81,19 +80,8 @@ export default function CalendarHomePage() {
           </p>
         </div>
 
-        {/* Quick Counters & Manual Refresh Button */}
+        {/* Manual Refresh Button */}
         <div className="flex items-center gap-2 text-xs self-start sm:self-auto">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-50 border border-slate-200 font-mono text-[11px]">
-            <span className="text-slate-500">Total:</span>
-            <strong className="text-slate-900">{tournaments.length}</strong>
-            {runningCount > 0 && (
-              <>
-                <span className="text-slate-300">•</span>
-                <span className="text-red-600 font-bold">🔴 {runningCount} live</span>
-              </>
-            )}
-          </div>
-
           <button
             onClick={() => loadData(true)}
             disabled={isRefreshing}

@@ -1,19 +1,22 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Fragment, useState, useMemo } from "react";
 import Link from "next/link";
 import { Match } from "@/lib/fivb/types";
 import { CountryHelper } from "@/lib/countryHelper";
 import { CountryFlag } from "./CountryFlag";
+import { formatDateHeading, groupByDate } from "@/lib/dateFormatter";
 
 interface Props {
   matches: Match[];
   title?: string;
   defaultOnlyPolish?: boolean;
   showTournamentColumn?: boolean;
+  /** Splits the list into per-day sections with a date heading. */
+  groupByDay?: boolean;
 }
 
-export function MatchTable({ matches, title, defaultOnlyPolish = false, showTournamentColumn = false }: Props) {
+export function MatchTable({ matches, title, defaultOnlyPolish = false, showTournamentColumn = false, groupByDay = false }: Props) {
   const [onlyPolish, setOnlyPolish] = useState(defaultOnlyPolish);
   const [selectedRound, setSelectedRound] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -82,99 +85,222 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
       );
     }
 
+    return groupByDay ? renderGroupedCards() : <div className="divide-y divide-slate-200">{filtered.map(renderCard)}</div>;
+  };
+
+  const renderGroupedCards = () => (
+    <div className="divide-y divide-slate-200">
+      {groupByDate(filtered).map((group) => (
+        <div key={group.date || "no-date"}>
+          <div className="sticky top-13 z-10 px-3 py-1.5 bg-slate-100/95 backdrop-blur border-y border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+            {formatDateHeading(group.date)}
+            <span className="ml-1.5 font-mono font-bold text-slate-400">({group.items.length})</span>
+          </div>
+          <div className="divide-y divide-slate-200">{group.items.map(renderCard)}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderCard = (m: Match) => {
+    const isTeamAPolish = m.teamA.countryCode === "POL";
+    const isTeamBPolish = m.teamB.countryCode === "POL";
+    const isLive = m.status === "live" || m.status === "break";
+    const isFinished = m.status === "finished";
+
     return (
-      <div className="divide-y divide-slate-100">
-        {filtered.map((m) => {
-          const isTeamAPolish = m.teamA.countryCode === "POL";
-          const isTeamBPolish = m.teamB.countryCode === "POL";
-          const isLive = m.status === "live" || m.status === "break";
-          const isFinished = m.status === "finished";
+      <Link
+        key={m.id}
+        href={`/tournaments/${m.tournamentId}`}
+        className={`block px-3 py-2.5 transition-colors ${
+          isLive ? "bg-red-50/40 hover:bg-red-50" : "hover:bg-slate-50"
+        }`}
+      >
+        {/* Top row: M# / time / phase / status */}
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
+            {m.matchNumber && <span className="font-bold">M{m.matchNumber}</span>}
+            <span className="font-bold text-slate-600">{m.time || "-"}</span>
+            {m.court && <span>C{m.court}</span>}
+            {m.roundName && <span className="text-slate-400">• {m.roundName}</span>}
+          </div>
+          {isLive ? (
+            <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-red-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+              LIVE
+            </span>
+          ) : isFinished ? (
+            <span className="text-[9px] text-slate-400">Done</span>
+          ) : (
+            <span className="text-[9px] text-blue-600">Plan</span>
+          )}
+        </div>
 
-          return (
-            <Link
-              key={m.id}
-              href={`/tournaments/${m.tournamentId}`}
-              className={`block px-3 py-2.5 transition-colors ${
-                isLive ? "bg-red-50/40 hover:bg-red-50" : "hover:bg-slate-50"
-              }`}
+        {/* Tournament name (if enabled) */}
+        {showTournamentColumn && m.tournamentTitle && (
+          <div className="text-[10px] text-slate-500 font-medium mb-1.5 truncate">
+            {m.tournamentTitle}
+          </div>
+        )}
+
+        {/* Teams stay left/right; each team's two players stack vertically
+            so full surnames fit without truncation on narrow screens. */}
+        <div className="flex items-stretch justify-between gap-2">
+          {/* Team A -- right-aligned towards the score */}
+          <div className="min-w-0 flex-1 flex items-center justify-end gap-1.5">
+            <div
+              className={`min-w-0 text-right text-xs leading-tight ${
+                isTeamAPolish ? "text-red-700 font-extrabold" : "text-slate-900"
+              } ${m.winner === "A" ? "font-bold text-slate-950" : "font-medium"}`}
             >
-              {/* Top row: M# / time / phase / status */}
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
-                  {m.matchNumber && <span className="font-bold">M{m.matchNumber}</span>}
-                  <span className="font-bold text-slate-600">{m.time || "-"}</span>
-                  {m.court && <span>C{m.court}</span>}
-                  {m.roundName && <span className="text-slate-400">• {m.roundName}</span>}
-                </div>
-                {isLive ? (
-                  <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-red-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                    LIVE
-                  </span>
-                ) : isFinished ? (
-                  <span className="text-[9px] text-slate-400">Done</span>
-                ) : (
-                  <span className="text-[9px] text-blue-600">Plan</span>
-                )}
-              </div>
+              {renderPlayerLines(m.teamA)}
+            </div>
+            <CountryFlag code={m.teamA.countryCode} className="text-sm shrink-0" />
+          </div>
 
-              {/* Tournament name (if enabled) */}
-              {showTournamentColumn && m.tournamentTitle && (
-                <div className="text-[10px] text-slate-500 font-medium mb-1.5 truncate">
-                  {m.tournamentTitle}
-                </div>
-              )}
+          {/* Single sets tally -- the per-team numbers used to repeat it */}
+          <span className="shrink-0 self-center font-mono font-bold px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-800">
+            {m.setsWonA} : {m.setsWonB}
+          </span>
 
-              {/* Teams stay left/right; each team's two players stack vertically
-                  so full surnames fit without truncation on narrow screens. */}
-              <div className="flex items-stretch justify-between gap-2">
-                {/* Team A -- right-aligned towards the score */}
-                <div className="min-w-0 flex-1 flex items-center justify-end gap-1.5">
-                  <div
-                    className={`min-w-0 text-right text-xs leading-tight ${
-                      isTeamAPolish ? "text-red-700 font-extrabold" : "text-slate-900"
-                    } ${m.winner === "A" ? "font-bold text-slate-950" : "font-medium"}`}
-                  >
-                    {renderPlayerLines(m.teamA)}
-                  </div>
-                  <CountryFlag code={m.teamA.countryCode} className="text-sm shrink-0" />
-                </div>
+          {/* Team B -- left-aligned away from the score */}
+          <div className="min-w-0 flex-1 flex items-center gap-1.5">
+            <CountryFlag code={m.teamB.countryCode} className="text-sm shrink-0" />
+            <div
+              className={`min-w-0 text-xs leading-tight ${
+                isTeamBPolish ? "text-red-700 font-extrabold" : "text-slate-900"
+              } ${m.winner === "B" ? "font-bold text-slate-950" : "font-medium"}`}
+            >
+              {renderPlayerLines(m.teamB)}
+            </div>
+          </div>
+        </div>
 
-                {/* Single sets tally -- the per-team numbers used to repeat it */}
-                <span className="shrink-0 self-center font-mono font-bold px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-800">
-                  {m.setsWonA} : {m.setsWonB}
+        {/* Set-by-set breakdown, one row per set */}
+        {m.sets && m.sets.length > 0 && (
+          <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-0.5">
+            {m.sets.map((set, idx) => (
+              <div key={idx} className="flex items-center justify-between font-mono text-[10px]">
+                <span className="text-slate-400">Set {set.setNumber || idx + 1}</span>
+                <span className={set.isFinished ? "text-slate-600" : "text-red-600 font-bold"}>
+                  {set.scoreA} : {set.scoreB}
                 </span>
-
-                {/* Team B -- left-aligned away from the score */}
-                <div className="min-w-0 flex-1 flex items-center gap-1.5">
-                  <CountryFlag code={m.teamB.countryCode} className="text-sm shrink-0" />
-                  <div
-                    className={`min-w-0 text-xs leading-tight ${
-                      isTeamBPolish ? "text-red-700 font-extrabold" : "text-slate-900"
-                    } ${m.winner === "B" ? "font-bold text-slate-950" : "font-medium"}`}
-                  >
-                    {renderPlayerLines(m.teamB)}
-                  </div>
-                </div>
               </div>
+            ))}
+          </div>
+        )}
+      </Link>
+    );
+  };
 
-              {/* Set-by-set breakdown, one row per set */}
-              {m.sets && m.sets.length > 0 && (
-                <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-0.5">
-                  {m.sets.map((set, idx) => (
-                    <div key={idx} className="flex items-center justify-between font-mono text-[10px]">
-                      <span className="text-slate-400">Set {set.setNumber || idx + 1}</span>
-                      <span className={set.isFinished ? "text-slate-600" : "text-red-600 font-bold"}>
-                        {set.scoreA} : {set.scoreB}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Link>
-          );
-        })}
-      </div>
+  const renderRow = (m: Match) => {
+    const isTeamAPolish = m.teamA.countryCode === "POL";
+    const isTeamBPolish = m.teamB.countryCode === "POL";
+    const hasPolish = isTeamAPolish || isTeamBPolish;
+    const isLive = m.status === "live" || m.status === "break";
+    const isFinished = m.status === "finished";
+
+    return (
+      <tr
+        key={m.id}
+        className={`hover:bg-slate-50 transition-colors ${
+          hasPolish ? "polish-row" : ""
+        } ${isLive ? "bg-red-50/50" : ""}`}
+      >
+        {/* Match number + court */}
+        <td className="py-1 px-2.5 whitespace-nowrap font-mono text-[10px] text-slate-400">
+          <span className="inline-flex items-baseline gap-1">
+            <span className="font-bold">{m.matchNumber ? `M${m.matchNumber}` : "—"}</span>
+            {m.court && <span className="text-slate-300">C{m.court}</span>}
+          </span>
+        </td>
+
+        {/* Time -- own column so values line up across rows */}
+        <td className="py-1 px-2 whitespace-nowrap font-mono text-sm font-bold text-slate-700 tabular-nums">
+          {m.time || <span className="text-slate-300 font-normal">—</span>}
+        </td>
+
+        {/* Tournament name (optional column) */}
+        {showTournamentColumn && (
+          <td className="py-1 px-3 whitespace-nowrap text-[11px] text-slate-600 max-w-[180px] truncate">
+            {m.tournamentTitle ? (
+              <Link
+                href={`/tournaments/${m.tournamentId}`}
+                className="hover:text-amber-600 transition-colors"
+              >
+                {m.tournamentTitle}
+              </Link>
+            ) : (
+              <span className="text-slate-400">—</span>
+            )}
+          </td>
+        )}
+
+        {/* Phase */}
+        <td className="py-1 px-2 whitespace-nowrap text-[11px] text-slate-600">
+          {m.roundName || m.round || "-"}
+        </td>
+
+        {/* Team 1 */}
+        <td className="py-1 px-3 text-right">
+          <div className="flex items-center justify-end gap-1.5">
+            <span
+              className={`truncate max-w-[140px] sm:max-w-[220px] ${
+                isTeamAPolish ? "text-red-700 font-extrabold" : "text-slate-900"
+              } ${m.winner === "A" ? "font-bold text-slate-950" : ""}`}
+            >
+              {m.teamA.name}
+            </span>
+            <CountryFlag code={m.teamA.countryCode} className="text-sm" />
+          </div>
+        </td>
+
+        {/* Sets won */}
+        <td className="py-1 px-2 text-center whitespace-nowrap">
+          <span
+            className={`font-mono font-bold px-1.5 py-0.2 rounded text-xs ${
+              isFinished || isLive
+                ? "bg-slate-100 text-slate-800"
+                : "text-slate-400"
+            }`}
+          >
+            {m.setsWonA} : {m.setsWonB}
+          </span>
+        </td>
+
+        {/* Team 2 */}
+        <td className="py-1 px-3 text-left">
+          <div className="flex items-center justify-start gap-1.5">
+            <CountryFlag code={m.teamB.countryCode} className="text-sm" />
+            <span
+              className={`truncate max-w-[140px] sm:max-w-[220px] ${
+                isTeamBPolish ? "text-red-700 font-extrabold" : "text-slate-900"
+              } ${m.winner === "B" ? "font-bold text-slate-950" : ""}`}
+            >
+              {m.teamB.name}
+            </span>
+          </div>
+        </td>
+
+        {/* Scores */}
+        <td className="py-1 px-3 whitespace-nowrap">
+          {renderSetScores(m)}
+        </td>
+
+        {/* Status */}
+        <td className="py-1 px-2.5 text-center whitespace-nowrap">
+          {isLive ? (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+              LIVE
+            </span>
+          ) : isFinished ? (
+            <span className="text-[10px] text-slate-400">Done</span>
+          ) : (
+            <span className="text-[10px] text-blue-600">Plan</span>
+          )}
+        </td>
+      </tr>
     );
   };
 
@@ -256,117 +382,23 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
                   <th className="py-1.5 px-2.5 text-center whitespace-nowrap">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {filtered.map((m) => {
-                  const isTeamAPolish = m.teamA.countryCode === "POL";
-                  const isTeamBPolish = m.teamB.countryCode === "POL";
-                  const hasPolish = isTeamAPolish || isTeamBPolish;
-                  const isLive = m.status === "live" || m.status === "break";
-                  const isFinished = m.status === "finished";
-
-                  return (
-                    <tr
-                      key={m.id}
-                      className={`hover:bg-slate-50 transition-colors ${
-                        hasPolish ? "polish-row" : ""
-                      } ${isLive ? "bg-red-50/50" : ""}`}
-                    >
-                      {/* Match number + court */}
-                      <td className="py-1 px-2.5 whitespace-nowrap font-mono text-[10px] text-slate-400">
-                        <span className="inline-flex items-baseline gap-1">
-                          <span className="font-bold">{m.matchNumber ? `M${m.matchNumber}` : "—"}</span>
-                          {m.court && <span className="text-slate-300">C{m.court}</span>}
-                        </span>
-                      </td>
-
-                      {/* Time -- own column so values line up across rows */}
-                      <td className="py-1 px-2 whitespace-nowrap font-mono text-sm font-bold text-slate-700 tabular-nums">
-                        {m.time || <span className="text-slate-300 font-normal">—</span>}
-                      </td>
-
-                      {/* Tournament name (optional column) */}
-                      {showTournamentColumn && (
-                        <td className="py-1 px-3 whitespace-nowrap text-[11px] text-slate-600 max-w-[180px] truncate">
-                          {m.tournamentTitle ? (
-                            <Link
-                              href={`/tournaments/${m.tournamentId}`}
-                              className="hover:text-amber-600 transition-colors"
-                            >
-                              {m.tournamentTitle}
-                            </Link>
-                          ) : (
-                            <span className="text-slate-400">—</span>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Phase */}
-                      <td className="py-1 px-2 whitespace-nowrap text-[11px] text-slate-600">
-                        {m.roundName || m.round || "-"}
-                      </td>
-
-                      {/* Team 1 */}
-                      <td className="py-1 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <span
-                            className={`truncate max-w-[140px] sm:max-w-[220px] ${
-                              isTeamAPolish ? "text-red-700 font-extrabold" : "text-slate-900"
-                            } ${m.winner === "A" ? "font-bold text-slate-950" : ""}`}
+              <tbody className="divide-y divide-slate-200 font-medium">
+                {groupByDay
+                  ? groupByDate(filtered).map((group) => (
+                      <Fragment key={group.date || "no-date"}>
+                        <tr className="bg-slate-100/90 border-y border-slate-200">
+                          <td
+                            colSpan={showTournamentColumn ? 9 : 8}
+                            className="py-1 px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-600"
                           >
-                            {m.teamA.name}
-                          </span>
-                          <CountryFlag code={m.teamA.countryCode} className="text-sm" />
-                        </div>
-                      </td>
-
-                      {/* Sets won */}
-                      <td className="py-1 px-2 text-center whitespace-nowrap">
-                        <span
-                          className={`font-mono font-bold px-1.5 py-0.2 rounded text-xs ${
-                            isFinished || isLive
-                              ? "bg-slate-100 text-slate-800"
-                              : "text-slate-400"
-                          }`}
-                        >
-                          {m.setsWonA} : {m.setsWonB}
-                        </span>
-                      </td>
-
-                      {/* Team 2 */}
-                      <td className="py-1 px-3 text-left">
-                        <div className="flex items-center justify-start gap-1.5">
-                          <CountryFlag code={m.teamB.countryCode} className="text-sm" />
-                          <span
-                            className={`truncate max-w-[140px] sm:max-w-[220px] ${
-                              isTeamBPolish ? "text-red-700 font-extrabold" : "text-slate-900"
-                            } ${m.winner === "B" ? "font-bold text-slate-950" : ""}`}
-                          >
-                            {m.teamB.name}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Scores */}
-                      <td className="py-1 px-3 whitespace-nowrap">
-                        {renderSetScores(m)}
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-1 px-2.5 text-center whitespace-nowrap">
-                        {isLive ? (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                            LIVE
-                          </span>
-                        ) : isFinished ? (
-                          <span className="text-[10px] text-slate-400">Done</span>
-                        ) : (
-                          <span className="text-[10px] text-blue-600">Plan</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                            {formatDateHeading(group.date)}
+                            <span className="ml-1.5 font-mono text-slate-400">({group.items.length})</span>
+                          </td>
+                        </tr>
+                        {group.items.map(renderRow)}
+                      </Fragment>
+                    ))
+                  : filtered.map(renderRow)}
               </tbody>
             </table>
           </div>

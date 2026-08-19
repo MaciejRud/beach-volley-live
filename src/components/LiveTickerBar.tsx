@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Match } from "@/lib/fivb/types";
+import { isProminentMatch, matchProminenceRank } from "@/lib/fivb/prominence";
 import { Radio, ArrowRight } from "lucide-react";
 
 interface Props {
@@ -10,7 +11,14 @@ interface Props {
 }
 
 export function LiveTickerBar({ liveMatches, polishMatchesCount }: Props) {
-  if (liveMatches.length === 0 && polishMatchesCount === 0) {
+  // The ticker is deliberately narrow: Beach Pro Tour and the senior European
+  // Championship only. National tours would otherwise crowd out the events
+  // people actually follow.
+  const tickerMatches = liveMatches
+    .filter(isProminentMatch)
+    .sort((a, b) => matchProminenceRank(a) - matchProminenceRank(b));
+
+  if (tickerMatches.length === 0 && polishMatchesCount === 0) {
     return null;
   }
 
@@ -22,7 +30,7 @@ export function LiveTickerBar({ liveMatches, polishMatchesCount }: Props) {
           <span>LIVE</span>
         </span>
 
-        {liveMatches.map((m) => {
+        {tickerMatches.map((m) => {
           const currentSet = m.sets[m.sets.length - 1];
           const hasScore = currentSet && (currentSet.scoreA > 0 || currentSet.scoreB > 0);
           const isTeamAPolish = m.teamA.countryCode === "POL";
@@ -50,7 +58,7 @@ export function LiveTickerBar({ liveMatches, polishMatchesCount }: Props) {
           );
         })}
 
-        {liveMatches.length === 0 && polishMatchesCount > 0 && (
+        {tickerMatches.length === 0 && polishMatchesCount > 0 && (
           <span className="text-[10px] text-red-800 font-medium truncate">
             Polish duos matches today ({polishMatchesCount} scheduled).
           </span>

@@ -146,6 +146,8 @@ export class ResponseParser {
             tournamentTitle: tournament?.title,
             tournamentCity: tournament?.city,
             tournamentCountry: tournament?.countryCode,
+            tournamentTier: tournament?.tier,
+            tournamentCircuit: tournament?.circuit,
             matchNumber,
             round,
             roundName,

@@ -69,10 +69,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
     });
   }, [tournaments, activeCircuit, search, selectedGender, selectedCountry]);
 
-  // Circuit counts for top badges
-  const bptCount = tournaments.filter((t) => t.circuit === "BPT").length;
-  const cevCount = tournaments.filter((t) => t.circuit === "CEV").length;
-  const nationalCount = tournaments.filter((t) => t.circuit === "National").length;
 
   // Extract unique countries for National Tours filter
   const nationalCountries = useMemo(() => {
@@ -310,8 +306,8 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
               </div>
               {/* Men's + Women's links */}
               <div className="space-y-0.5">
-                {renderGenderLink(p.male, "👨 Men")}
-                {renderGenderLink(p.female, "👩 Women")}
+                {renderGenderLink(p.male, "Men")}
+                {renderGenderLink(p.female, "Women")}
               </div>
             </div>
           );
@@ -363,8 +359,8 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
                   <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                     <th className="py-1.5 px-3 whitespace-nowrap">Date</th>
                     <th className="py-1.5 px-3">Host / Event</th>
-                    <th className="py-1.5 px-3 text-center whitespace-nowrap">👨 Men</th>
-                    <th className="py-1.5 px-3 text-center whitespace-nowrap">👩 Women</th>
+                    <th className="py-1.5 px-3 text-center whitespace-nowrap">Men</th>
+                    <th className="py-1.5 px-3 text-center whitespace-nowrap">Women</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -611,10 +607,7 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
                 : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50"
             }`}
           >
-            <span>🏆 Beach Pro Tour</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500 text-black font-extrabold">
-              {bptCount}
-            </span>
+            <span>Beach Pro Tour</span>
           </button>
 
           <button
@@ -625,10 +618,7 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
                 : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50"
             }`}
           >
-            <span>🇪🇺 CEV (European)</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-extrabold">
-              {cevCount}
-            </span>
+            <span>CEV (European)</span>
           </button>
 
           <button
@@ -639,10 +629,7 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
                 : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50"
             }`}
           >
-            <span>🏐 National Tours</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-extrabold">
-              {nationalCount}
-            </span>
+            <span>National Tours</span>
           </button>
         </div>
 

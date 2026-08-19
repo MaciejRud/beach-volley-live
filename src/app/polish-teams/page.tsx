@@ -101,6 +101,7 @@ export default function PolishTeamsPage() {
           title="Polish duos matches (Live, Scheduled & Recent)"
           defaultOnlyPolish={true}
           showTournamentColumn
+          groupByDay
         />
       )}
     </div>

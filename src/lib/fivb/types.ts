@@ -55,6 +55,8 @@ export interface Match {
   tournamentTitle?: string;
   tournamentCity?: string;
   tournamentCountry?: string;
+  tournamentTier?: TournamentTier;
+  tournamentCircuit?: TournamentCircuit;
   matchNumber?: string;
   round: string;
   roundName: string;
