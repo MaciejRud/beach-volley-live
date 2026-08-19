@@ -67,7 +67,7 @@ Conventional commits: `feat:` `fix:` `refactor:` `docs:` `style:` `test:` `chore
 ## Technology Stack
 
 ```
-Framework:   Next.js 15 (App Router, React 19, Server Components)
+Framework:   Next.js 16 (App Router, React 19, Server Components)
 Language:    TypeScript 5.7 (strict)
 Styling:     Tailwind CSS 4 (@tailwindcss/postcss)
 XML parsing: fast-xml-parser
@@ -113,7 +113,7 @@ beach-volley-live/
 ## Commands
 
 ```bash
-npm run dev          # Dev server on :3000
+npm run dev          # Dev server on :3000 (webpack, see note below)
 npm run build        # Production build - THE verification gate
 npm run start        # Serve production build
 npm run test:fivb    # Smoke-test the live FIVB API connection
@@ -121,6 +121,10 @@ npm run test:fivb    # Smoke-test the live FIVB API connection
 
 If `npm run build` fails with `MODULE_NOT_FOUND ./NNN.js` or `PageNotFoundError`,
 delete `.next/` and rebuild - that is a stale dev artifact, not a code error.
+
+Both scripts pass `--webpack`. Next 16 defaults to Turbopack, which the
+`@serwist/next` service-worker plugin cannot hook into; drop the flag once
+Serwist's Turbopack support is no longer experimental.
 
 ## Documentation Paths
 

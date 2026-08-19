@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { PolishTeamsSummary, Match } from "@/lib/fivb/types";
 import { MatchTable } from "@/components/MatchTable";
-import { Flag, RefreshCw } from "lucide-react";
 
 export default function PolishTeamsPage() {
   const [summary, setSummary] = useState<PolishTeamsSummary | null>(null);
@@ -46,30 +45,13 @@ export default function PolishTeamsPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-white px-4 py-3 rounded-lg border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className="text-xl">🇵🇱</span>
-          <div>
-            <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-              Poland Zone
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-red-100 text-red-700 border border-red-200">
-                White & Red
-              </span>
-            </h1>
-            <p className="text-xs text-slate-500">
-              All matches of Polish representatives in FIVB & Beach Pro Tour events
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => fetchSummary(true)}
-          disabled={isRefreshing}
-          className="p-1.5 rounded hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer disabled:opacity-50 self-start sm:self-auto"
-          title="Refresh data"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-        </button>
+      <div className="bg-white px-4 py-3 rounded-lg border border-slate-200 shadow-xs">
+        <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+          Poland Zone
+        </h1>
+        <p className="text-xs text-slate-500">
+          All matches of Polish representatives in FIVB & Beach Pro Tour events
+        </p>
       </div>
 
       {error && (
@@ -85,7 +67,7 @@ export default function PolishTeamsPage() {
             <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
             <span>Polish matches currently live</span>
           </div>
-          <MatchTable matches={activeMatches} title="🔴 Live" defaultOnlyPolish={true} showTournamentColumn />
+          <MatchTable matches={activeMatches} title="🔴 Live" showTournamentColumn />
         </div>
       )}
 
@@ -99,7 +81,7 @@ export default function PolishTeamsPage() {
         <MatchTable
           matches={allPolishMatches}
           title="Polish duos matches (Live, Scheduled & Recent)"
-          defaultOnlyPolish={true}
+         
           showTournamentColumn
           groupByDay
         />

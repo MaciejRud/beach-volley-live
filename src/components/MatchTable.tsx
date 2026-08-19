@@ -11,7 +11,6 @@ import { formatDateHeading, groupByDate } from "@/lib/dateFormatter";
 interface Props {
   matches: Match[];
   title?: string;
-  defaultOnlyPolish?: boolean;
   showTournamentColumn?: boolean;
   /** Splits the list into per-day sections with a date heading. */
   groupByDay?: boolean;
@@ -19,29 +18,9 @@ interface Props {
   hidePhaseColumn?: boolean;
 }
 
-export function MatchTable({ matches, title, defaultOnlyPolish = false, showTournamentColumn = false, groupByDay = false, hidePhaseColumn = false }: Props) {
-  const [onlyPolish, setOnlyPolish] = useState(defaultOnlyPolish);
-  const [selectedRound, setSelectedRound] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+export function MatchTable({ matches, title, showTournamentColumn = false, groupByDay = false, hidePhaseColumn = false }: Props) {
 
-  const rounds = useMemo(() => {
-    const set = new Set<string>();
-    for (const m of matches) {
-      if (m.roundName) set.add(m.roundName);
-    }
-    return Array.from(set);
-  }, [matches]);
-
-  const filtered = useMemo(() => {
-    return matches.filter((m) => {
-      if (onlyPolish && !m.isPolishMatch) return false;
-      if (selectedRound !== "all" && m.roundName !== selectedRound) return false;
-      if (selectedStatus === "live" && m.status !== "live" && m.status !== "break") return false;
-      if (selectedStatus === "finished" && m.status !== "finished") return false;
-      if (selectedStatus === "scheduled" && m.status !== "scheduled") return false;
-      return true;
-    });
-  }, [matches, onlyPolish, selectedRound, selectedStatus]);
+  const filtered = matches;
 
   const formatSetsString = (match: Match) => {
     if (!match.sets || match.sets.length === 0) return "";
@@ -144,11 +123,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
               <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
               LIVE
             </span>
-          ) : isFinished ? (
-            <span className="text-[9px] text-slate-400">Done</span>
-          ) : (
-            <span className="text-[9px] text-blue-600">Plan</span>
-          )}
+          ) : null}
         </div>
 
         {/* Tournament name (if enabled) */}
@@ -303,23 +278,18 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
           </div>
         </td>
 
-        {/* Scores */}
+        {/* Scores, with a live dot in place of a status column -- a played
+            match is evident from its score. */}
         <td className="py-1 px-3 whitespace-nowrap">
-          {renderSetScores(m)}
-        </td>
-
-        {/* Status */}
-        <td className="py-1 px-2.5 text-center whitespace-nowrap">
-          {isLive ? (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-              LIVE
-            </span>
-          ) : isFinished ? (
-            <span className="text-[10px] text-slate-400">Done</span>
-          ) : (
-            <span className="text-[10px] text-blue-600">Plan</span>
-          )}
+          <span className="inline-flex items-center gap-1.5">
+            {renderSetScores(m)}
+            {isLive && (
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse shrink-0"
+                title="Live"
+              />
+            )}
+          </span>
         </td>
       </tr>
     );
@@ -334,47 +304,6 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
           <span className="text-[11px] text-slate-400 font-mono">({filtered.length})</span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          {/* Polish filter toggle button */}
-          <button
-            onClick={() => setOnlyPolish(!onlyPolish)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
-              onlyPolish
-                ? "bg-red-600 text-white shadow-xs"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
-            }`}
-          >
-            <span>🇵🇱 Poland only</span>
-          </button>
-
-          {/* Status filter */}
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-slate-700 rounded px-2 py-1 text-[11px] focus:outline-none"
-          >
-            <option value="all">All statuses</option>
-            <option value="live">🔴 Live</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="finished">Finished</option>
-          </select>
-
-          {/* Round dropdown */}
-          {rounds.length > 0 && (
-            <select
-              value={selectedRound}
-              onChange={(e) => setSelectedRound(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 rounded px-2 py-1 text-[11px] focus:outline-none"
-            >
-              <option value="all">All phases</option>
-              {rounds.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
       </div>
 
       {/* Dense Table / Cards */}
@@ -387,7 +316,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
 
           {/* Desktop: table layout */}
           <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full min-w-[860px] table-fixed text-left text-xs border-collapse">
+            <table className="w-full min-w-[800px] table-fixed text-left text-xs border-collapse">
               {/* Fixed widths keep separate section tables aligned with each other. */}
               <colgroup>
                 <col className="w-[72px]" />
@@ -397,8 +326,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
                 <col />
                 <col className="w-[64px]" />
                 <col />
-                <col className="w-[128px]" />
-                <col className="w-[72px]" />
+                <col className="w-[140px]" />
               </colgroup>
               <thead>
                 <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
@@ -412,7 +340,6 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
                   <th className="py-1.5 px-2 text-center whitespace-nowrap font-mono">Sets</th>
                   <th className="py-1.5 px-3">Team 2</th>
                   <th className="py-1.5 px-3 whitespace-nowrap font-mono">Scores</th>
-                  <th className="py-1.5 px-2.5 text-center whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 font-medium">
@@ -421,7 +348,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
                       <Fragment key={group.date || "no-date"}>
                         <tr className="bg-slate-100/90 border-y border-slate-200">
                           <td
-                            colSpan={7 + (showTournamentColumn ? 1 : 0) + (hidePhaseColumn ? 0 : 1)}
+                            colSpan={6 + (showTournamentColumn ? 1 : 0) + (hidePhaseColumn ? 0 : 1)}
                             className="py-1 px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-600"
                           >
                             {formatDateHeading(group.date)}

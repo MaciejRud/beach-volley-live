@@ -28,7 +28,6 @@ interface PairedTournament {
 export function TournamentTable({ tournaments, isLoading = false }: Props) {
   const [activeCircuit, setActiveCircuit] = useState<TournamentCircuit>("BPT");
   const [search, setSearch] = useState("");
-  const [selectedGender, setSelectedGender] = useState<string>("all");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
 
   // Collapsible section state for BPT sub-tiers
@@ -61,13 +60,12 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
         if (!inTitle && !inCity && !inCode && !inCountry) return false;
       }
 
-      if (selectedGender !== "all" && t.gender !== selectedGender) return false;
 
       if (selectedCountry !== "all" && t.countryCode !== selectedCountry) return false;
 
       return true;
     });
-  }, [tournaments, activeCircuit, search, selectedGender, selectedCountry]);
+  }, [tournaments, activeCircuit, search, selectedCountry]);
 
 
   // Extract unique countries for National Tours filter
@@ -99,8 +97,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
       const isRunning = group.some((t) => t.status === "running");
 
       // Filter by gender: if user selected M, pair must have male; if W, must have female
-      if (selectedGender === "M" && !male) continue;
-      if (selectedGender === "W" && !female) continue;
 
       pairs.push({
         title,
@@ -121,7 +117,7 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
       const dateB = b.startDateMain || b.startDate || "";
       return dateA.localeCompare(dateB);
     });
-  }, [circuitTournaments, activeCircuit, selectedGender]);
+  }, [circuitTournaments, activeCircuit]);
 
   // BPT paired groups by tier
   const pairedElite = pairedBPT.filter((p) =>
@@ -318,8 +314,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
 
   const renderPairedSection = (
     title: string,
-    badgeText: string,
-    badgeClass: string,
     list: PairedTournament[],
     sectionKey: string
   ) => {
@@ -332,9 +326,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
           className="w-full bg-slate-50 hover:bg-slate-100/80 px-3 py-2 border-b border-slate-200 flex items-center justify-between transition-colors cursor-pointer text-left"
         >
           <div className="flex items-center gap-2">
-            <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${badgeClass}`}>
-              {badgeText}
-            </span>
             <h2 className="font-bold text-xs sm:text-sm text-slate-800">{title}</h2>
           </div>
           <div className="flex items-center gap-2">
@@ -537,8 +528,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
 
   const renderSection = (
     title: string,
-    badgeText: string,
-    badgeClass: string,
     list: Tournament[],
     sectionKey: string
   ) => {
@@ -551,9 +540,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
           className="w-full bg-slate-50 hover:bg-slate-100/80 px-3 py-2 border-b border-slate-200 flex items-center justify-between transition-colors cursor-pointer text-left"
         >
           <div className="flex items-center gap-2">
-            <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${badgeClass}`}>
-              {badgeText}
-            </span>
             <h2 className="font-bold text-xs sm:text-sm text-slate-800">{title}</h2>
           </div>
           <div className="flex items-center gap-2">
@@ -633,17 +619,8 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
           </button>
         </div>
 
-        {/* Gender & Country Filters */}
+        {/* Country filter */}
         <div className="flex items-center gap-1.5 text-xs">
-          <select
-            value={selectedGender}
-            onChange={(e) => setSelectedGender(e.target.value)}
-            className="bg-white border border-slate-200 text-slate-700 rounded px-2 py-1 text-[11px] focus:outline-none shadow-xs"
-          >
-            <option value="all">Gender: All</option>
-            <option value="M">Men (M)</option>
-            <option value="W">Women (W)</option>
-          </select>
 
           {activeCircuit === "National" && nationalCountries.length > 0 && (
             <select
@@ -691,8 +668,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
               {pairedRunning.length > 0 &&
                 renderPairedSection(
                   "Live now (LIVE)",
-                  "🔴 LIVE",
-                  "bg-red-100 text-red-700 border-red-300 animate-pulse",
                   pairedRunning,
                   "running"
                 )}
@@ -700,8 +675,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
               {/* Elite 16 */}
               {renderPairedSection(
                 "Beach Pro Tour: Elite 16",
-                "Elite 16",
-                "bg-amber-100 text-amber-800 border-amber-300 font-extrabold",
                 pairedElite,
                 "Elite16"
               )}
@@ -709,8 +682,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
               {/* Challenge */}
               {renderPairedSection(
                 "Beach Pro Tour: Challenge",
-                "Challenge",
-                "bg-sky-100 text-sky-800 border-sky-300 font-extrabold",
                 pairedChallenge,
                 "Challenge"
               )}
@@ -718,8 +689,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
               {/* Futures */}
               {renderPairedSection(
                 "Beach Pro Tour: Futures",
-                "Futures",
-                "bg-orange-100 text-orange-800 border-orange-300 font-extrabold",
                 pairedFutures,
                 "Futures"
               )}
@@ -728,8 +697,6 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
               {pairedWorldChamps.length > 0 &&
                 renderPairedSection(
                   "World Championships & Olympic Games",
-                  "WCHs / Olympic",
-                  "bg-purple-100 text-purple-800 border-purple-300 font-extrabold",
                   pairedWorldChamps,
                   "WorldChamps"
                 )}
@@ -742,15 +709,11 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
               {currentlyRunning.length > 0 &&
                 renderSection(
                   "Live now (LIVE)",
-                  "🔴 LIVE",
-                  "bg-red-100 text-red-700 border-red-300 animate-pulse",
                   currentlyRunning,
                   "running"
                 )}
               {renderSection(
                 "European CEV & Nations Cup Tournaments",
-                "CEV",
-                "bg-emerald-100 text-emerald-800 border-emerald-300 font-extrabold",
                 cevList,
                 "CEV"
               )}
@@ -763,15 +726,11 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
               {currentlyRunning.length > 0 &&
                 renderSection(
                   "Live now (LIVE)",
-                  "🔴 LIVE",
-                  "bg-red-100 text-red-700 border-red-300 animate-pulse",
                   currentlyRunning,
                   "running"
                 )}
               {renderSection(
                 "National Tours & Championships Calendar",
-                "National",
-                "bg-slate-100 text-slate-700 border-slate-300 font-extrabold",
                 nationalList,
                 "National"
               )}
