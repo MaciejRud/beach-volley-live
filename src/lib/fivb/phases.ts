@@ -104,9 +104,22 @@ function buildPhases(matches: Match[], section: DrawSection): PhaseGroup[] {
 }
 
 /**
+ * True once a match has actually been played or is under way. The feed lists
+ * the whole main draw as empty placeholders from the moment a tournament is
+ * created, so the presence of main-draw rows says nothing on its own.
+ */
+function hasStarted(m: Match): boolean {
+  return m.status === "live" || m.status === "break" || m.status === "finished";
+}
+
+/**
  * Splits matches into qualification and main draw. Returns an empty array when
  * the feed carries no phase information, so callers can fall back to a flat
  * list rather than rendering a single meaningless section.
+ *
+ * Qualification leads while it is the only thing happening, then drops below
+ * the main draw once main-draw matches are under way -- by that point the
+ * qualification results are history.
  */
 export function groupByDraw(matches: Match[]): DrawGroup[] {
   const qualification = matches.filter((m) => m.roundPhase === QUALIFICATION_PHASE);
@@ -114,9 +127,10 @@ export function groupByDraw(matches: Match[]): DrawGroup[] {
 
   if (qualification.length === 0 && mainDraw.length === 0) return [];
 
+  const mainDrawUnderway = mainDraw.some(hasStarted);
   const groups: DrawGroup[] = [];
 
-  if (qualification.length > 0) {
+  if (qualification.length > 0 && !mainDrawUnderway) {
     groups.push({
       section: "qualification",
       title: "Qualification",
@@ -129,6 +143,14 @@ export function groupByDraw(matches: Match[]): DrawGroup[] {
       section: "mainDraw",
       title: "Main Draw",
       phases: buildPhases(mainDraw, "mainDraw"),
+    });
+  }
+
+  if (qualification.length > 0 && mainDrawUnderway) {
+    groups.push({
+      section: "qualification",
+      title: "Qualification",
+      phases: buildPhases(qualification, "qualification"),
     });
   }
 
