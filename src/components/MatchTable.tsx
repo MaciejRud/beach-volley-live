@@ -14,11 +14,11 @@ interface Props {
   showTournamentColumn?: boolean;
   /** Splits the list into per-day sections with a date heading. */
   groupByDay?: boolean;
-  /** Hides the Phase column when the surrounding section already names it. */
-  hidePhaseColumn?: boolean;
+  /** Hides the phase label where the surrounding section already names it. */
+  hidePhase?: boolean;
 }
 
-export function MatchTable({ matches, title, showTournamentColumn = false, groupByDay = false, hidePhaseColumn = false }: Props) {
+export function MatchTable({ matches, title, showTournamentColumn = false, groupByDay = false, hidePhase = false }: Props) {
 
   const filtered = matches;
 
@@ -95,12 +95,8 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
   );
 
   const renderCard = (m: Match) => {
-    const isTeamAPolish = m.teamA.countryCode === "POL";
-    const isTeamBPolish = m.teamB.countryCode === "POL";
     const isLive = m.status === "live" || m.status === "break";
-    const isFinished = m.status === "finished";
-
-    const hasPolish = isTeamAPolish || isTeamBPolish;
+    const hasPolish = m.teamA.countryCode === "POL" || m.teamB.countryCode === "POL";
 
     return (
       <Link
@@ -110,75 +106,69 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
           hasPolish ? "polish-row" : ""
         } ${isLive ? "bg-red-50/40 hover:bg-red-50" : "hover:bg-slate-50"}`}
       >
-        {/* Top row: M# / time / phase / status */}
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
-            {m.matchNumber && <span className="font-bold">M{m.matchNumber}</span>}
-            <MatchTime match={m} className="font-bold text-slate-600" />
-            {m.court && <span>C{m.court}</span>}
-            {m.roundName && <span className="text-slate-400">• {m.roundName}</span>}
-          </div>
-          {isLive ? (
-            <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-red-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-              LIVE
-            </span>
-          ) : null}
-        </div>
-
-        {/* Tournament name (if enabled) */}
-        {showTournamentColumn && m.tournamentTitle && (
-          <div className="text-[10px] text-slate-500 font-medium mb-1.5 truncate">
-            {m.tournamentTitle}
-          </div>
-        )}
-
-        {/* Teams stay left/right; each team's two players stack vertically
-            so full surnames fit without truncation on narrow screens. */}
-        <div className="flex items-stretch justify-between gap-2">
-          {/* Team A -- right-aligned towards the score */}
-          <div className="min-w-0 flex-1 flex items-center justify-end gap-1.5">
-            <div
-              className={`min-w-0 text-right text-xs leading-tight ${
-                "text-slate-900"
-              } ${m.winner === "A" ? "font-bold text-slate-950" : "font-medium"}`}
-            >
-              {renderPlayerLines(m.teamA)}
-            </div>
-            <CountryFlag code={m.teamA.countryCode} className="text-sm shrink-0" />
+        {/* One compact row: time and court on the left, teams in the middle,
+            sets on the right. */}
+        <div className="flex items-center gap-2.5">
+          <div className="shrink-0 w-11 font-mono text-[10px] text-slate-400 leading-tight">
+            <MatchTime match={m} stacked className="text-[11px] font-bold text-slate-600" />
+            {m.court && <div className="mt-0.5">C{m.court}</div>}
           </div>
 
-          {/* Single sets tally -- the per-team numbers used to repeat it */}
-          <span className="shrink-0 self-center font-mono font-bold px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-800">
-            {m.setsWonA} : {m.setsWonB}
-          </span>
-
-          {/* Team B -- left-aligned away from the score */}
-          <div className="min-w-0 flex-1 flex items-center gap-1.5">
-            <CountryFlag code={m.teamB.countryCode} className="text-sm shrink-0" />
-            <div
-              className={`min-w-0 text-xs leading-tight ${
-                "text-slate-900"
-              } ${m.winner === "B" ? "font-bold text-slate-950" : "font-medium"}`}
-            >
-              {renderPlayerLines(m.teamB)}
-            </div>
-          </div>
-        </div>
-
-        {/* Set scores, stacked centrally under the match score */}
-        {m.sets && m.sets.length > 0 && (
-          <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex flex-col items-center gap-0.5">
-            {m.sets.map((set, idx) => (
-              <span
-                key={idx}
-                className={`font-mono text-[10px] tabular-nums ${
-                  set.isFinished ? "text-slate-500" : "text-red-600 font-bold"
+          {/* Teams stay left/right; each team's players stack vertically so
+              full surnames fit without truncation on narrow screens. */}
+          <div className="min-w-0 flex-1 flex items-stretch justify-between gap-2">
+            <div className="min-w-0 flex-1 flex items-center justify-end gap-1.5">
+              <div
+                className={`min-w-0 text-right text-xs leading-tight text-slate-900 ${
+                  m.winner === "A" ? "font-bold text-slate-950" : "font-medium"
                 }`}
               >
-                {set.scoreA} : {set.scoreB}
+                {renderPlayerLines(m.teamA)}
+              </div>
+              <CountryFlag code={m.teamA.countryCode} className="text-sm shrink-0" />
+            </div>
+
+            <span className="shrink-0 self-center font-mono font-bold px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-800">
+              {m.setsWonA} : {m.setsWonB}
+            </span>
+
+            <div className="min-w-0 flex-1 flex items-center gap-1.5">
+              <CountryFlag code={m.teamB.countryCode} className="text-sm shrink-0" />
+              <div
+                className={`min-w-0 text-xs leading-tight text-slate-900 ${
+                  m.winner === "B" ? "font-bold text-slate-950" : "font-medium"
+                }`}
+              >
+                {renderPlayerLines(m.teamB)}
+              </div>
+            </div>
+          </div>
+
+          {/* Set scores sit beside the names rather than under them */}
+          <div className="shrink-0 w-12 flex flex-col items-end gap-0.5 font-mono text-[10px] tabular-nums leading-tight">
+            {isLive && (
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" title="Live" />
+            )}
+            {m.sets?.map((set, idx) => (
+              <span key={idx} className={set.isFinished ? "text-slate-500" : "text-red-600 font-bold"}>
+                {set.scoreA}:{set.scoreB}
               </span>
             ))}
+          </div>
+        </div>
+
+        {/* Context line: tournament, phase and match number, only where the
+            surrounding section does not already state them. */}
+        {(showTournamentColumn || !hidePhase || m.matchNumber) && (
+          <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400 truncate">
+            {m.matchNumber && <span className="font-mono font-bold shrink-0">M{m.matchNumber}</span>}
+            {!hidePhase && m.roundName && <span className="truncate">{m.roundName}</span>}
+            {showTournamentColumn && m.tournamentTitle && (
+              <>
+                {(!hidePhase && m.roundName) || m.matchNumber ? <span>•</span> : null}
+                <span className="truncate">{m.tournamentTitle}</span>
+              </>
+            )}
           </div>
         )}
       </Link>
@@ -232,7 +222,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
         )}
 
         {/* Phase -- omitted when the section heading already states it */}
-        {!hidePhaseColumn && (
+        {!hidePhase && (
           <td
             className="py-1 px-2 truncate text-[11px] text-slate-600"
             title={m.roundName || m.round || undefined}
@@ -329,7 +319,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
                 <col className="w-[64px]" />
                 <col className="w-[104px]" />
                 {showTournamentColumn && <col className="w-[168px]" />}
-                {!hidePhaseColumn && <col className="w-[108px]" />}
+                {!hidePhase && <col className="w-[108px]" />}
                 <col />
                 <col className="w-[64px]" />
                 <col />
@@ -342,7 +332,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
                   {showTournamentColumn && (
                     <th className="py-1.5 px-3 whitespace-nowrap">Tournament</th>
                   )}
-                  {!hidePhaseColumn && <th className="py-1.5 px-2 whitespace-nowrap">Phase</th>}
+                  {!hidePhase && <th className="py-1.5 px-2 whitespace-nowrap">Phase</th>}
                   <th className="py-1.5 px-3 text-right">Team 1</th>
                   <th className="py-1.5 px-2 text-center whitespace-nowrap font-mono">Sets</th>
                   <th className="py-1.5 px-3">Team 2</th>
@@ -355,7 +345,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
                       <Fragment key={group.date || "no-date"}>
                         <tr className="bg-slate-100/90 border-y border-slate-200">
                           <td
-                            colSpan={6 + (showTournamentColumn ? 1 : 0) + (hidePhaseColumn ? 0 : 1)}
+                            colSpan={6 + (showTournamentColumn ? 1 : 0) + (hidePhase ? 0 : 1)}
                             className="py-1 px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-600"
                           >
                             {formatDateHeading(group.date)}

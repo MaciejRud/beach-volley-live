@@ -6,6 +6,8 @@ import { Match } from "@/lib/fivb/types";
 interface Props {
   match: Pick<Match, "time" | "startsAtUtc">;
   className?: string;
+  /** Puts the venue time on its own line instead of in brackets alongside. */
+  stacked?: boolean;
 }
 
 /**
@@ -17,7 +19,7 @@ interface Props {
  * would trip React's hydration check. Until the effect runs, the venue time is
  * shown -- correct for anyone in that zone, and never blank.
  */
-export function MatchTime({ match, className = "" }: Props) {
+export function MatchTime({ match, className = "", stacked = false }: Props) {
   const [localTime, setLocalTime] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,6 +40,17 @@ export function MatchTime({ match, className = "" }: Props) {
   // Before hydration, or when the times agree, one value says everything.
   if (!localTime || localTime === match.time) {
     return <span className={className}>{match.time}</span>;
+  }
+
+  if (stacked) {
+    return (
+      <span className={`flex flex-col leading-tight ${className}`}>
+        <span>{localTime}</span>
+        <span className="font-normal text-[9px] text-slate-400" title="Local time at the venue">
+          {match.time}
+        </span>
+      </span>
+    );
   }
 
   return (

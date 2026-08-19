@@ -117,7 +117,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   key={`${group.section}-${phase.name}`}
                   matches={phase.matches}
                   title={phase.name}
-                  hidePhaseColumn
+                  hidePhase
                 />
               ))}
             </section>
