@@ -14,9 +14,11 @@ interface Props {
   showTournamentColumn?: boolean;
   /** Splits the list into per-day sections with a date heading. */
   groupByDay?: boolean;
+  /** Hides the Phase column when the surrounding section already names it. */
+  hidePhaseColumn?: boolean;
 }
 
-export function MatchTable({ matches, title, defaultOnlyPolish = false, showTournamentColumn = false, groupByDay = false }: Props) {
+export function MatchTable({ matches, title, defaultOnlyPolish = false, showTournamentColumn = false, groupByDay = false, hidePhaseColumn = false }: Props) {
   const [onlyPolish, setOnlyPolish] = useState(defaultOnlyPolish);
   const [selectedRound, setSelectedRound] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -102,7 +104,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
     <div className="divide-y divide-slate-200">
       {groupByDate(filtered).map((group) => (
         <div key={group.date || "no-date"}>
-          <div className="sticky top-13 z-10 px-3 py-1.5 bg-slate-100/95 backdrop-blur border-y border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+          <div className="sticky top-[3.25rem] z-20 px-3 py-1.5 bg-slate-100/95 backdrop-blur border-y border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
             {formatDateHeading(group.date)}
             <span className="ml-1.5 font-mono font-bold text-slate-400">({group.items.length})</span>
           </div>
@@ -186,16 +188,18 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
           </div>
         </div>
 
-        {/* Set-by-set breakdown, one row per set */}
+        {/* Set scores, stacked centrally under the match score */}
         {m.sets && m.sets.length > 0 && (
-          <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-0.5">
+          <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex flex-col items-center gap-0.5">
             {m.sets.map((set, idx) => (
-              <div key={idx} className="flex items-center justify-between font-mono text-[10px]">
-                <span className="text-slate-400">Set {set.setNumber || idx + 1}</span>
-                <span className={set.isFinished ? "text-slate-600" : "text-red-600 font-bold"}>
-                  {set.scoreA} : {set.scoreB}
-                </span>
-              </div>
+              <span
+                key={idx}
+                className={`font-mono text-[10px] tabular-nums ${
+                  set.isFinished ? "text-slate-500" : "text-red-600 font-bold"
+                }`}
+              >
+                {set.scoreA} : {set.scoreB}
+              </span>
             ))}
           </div>
         )}
@@ -246,10 +250,12 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
           </td>
         )}
 
-        {/* Phase */}
-        <td className="py-1 px-2 whitespace-nowrap text-[11px] text-slate-600">
-          {m.roundName || m.round || "-"}
-        </td>
+        {/* Phase -- omitted when the section heading already states it */}
+        {!hidePhaseColumn && (
+          <td className="py-1 px-2 truncate text-[11px] text-slate-600">
+            {m.roundName || m.round || "-"}
+          </td>
+        )}
 
         {/* Team 1 */}
         <td className="py-1 px-3 text-right">
@@ -378,7 +384,19 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
 
           {/* Desktop: table layout */}
           <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full min-w-[860px] table-fixed text-left text-xs border-collapse">
+              {/* Fixed widths keep separate section tables aligned with each other. */}
+              <colgroup>
+                <col className="w-[72px]" />
+                <col className="w-[64px]" />
+                {showTournamentColumn && <col className="w-[168px]" />}
+                {!hidePhaseColumn && <col className="w-[108px]" />}
+                <col />
+                <col className="w-[64px]" />
+                <col />
+                <col className="w-[128px]" />
+                <col className="w-[72px]" />
+              </colgroup>
               <thead>
                 <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                   <th className="py-1.5 px-2.5 whitespace-nowrap">M#</th>
@@ -386,7 +404,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
                   {showTournamentColumn && (
                     <th className="py-1.5 px-3 whitespace-nowrap">Tournament</th>
                   )}
-                  <th className="py-1.5 px-2 whitespace-nowrap">Phase</th>
+                  {!hidePhaseColumn && <th className="py-1.5 px-2 whitespace-nowrap">Phase</th>}
                   <th className="py-1.5 px-3 text-right">Team 1</th>
                   <th className="py-1.5 px-2 text-center whitespace-nowrap font-mono">Sets</th>
                   <th className="py-1.5 px-3">Team 2</th>
@@ -400,7 +418,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
                       <Fragment key={group.date || "no-date"}>
                         <tr className="bg-slate-100/90 border-y border-slate-200">
                           <td
-                            colSpan={showTournamentColumn ? 9 : 8}
+                            colSpan={7 + (showTournamentColumn ? 1 : 0) + (hidePhaseColumn ? 0 : 1)}
                             className="py-1 px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-600"
                           >
                             {formatDateHeading(group.date)}

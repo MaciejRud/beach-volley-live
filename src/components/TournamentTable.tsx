@@ -249,7 +249,7 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
     }
 
     return (
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-slate-200">
         {list.map((p) => {
           const renderGenderLink = (t?: Tournament, label: string = "") => {
             if (!t) {
@@ -363,7 +363,7 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
                     <th className="py-1.5 px-3 text-center whitespace-nowrap">Women</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
+                <tbody className="divide-y divide-slate-200 font-medium">
                   {renderPairedRows(list)}
                 </tbody>
               </table>
@@ -480,7 +480,7 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
     }
 
     return (
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-slate-200">
         {sorted.map((t) => {
           const isLive = t.status === "running";
           const isFinished = t.status === "finished";
@@ -583,7 +583,7 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
                     <th className="py-1.5 px-3 text-right whitespace-nowrap">Results</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
+                <tbody className="divide-y divide-slate-200 font-medium">
                   {renderTableRows(list)}
                 </tbody>
               </table>

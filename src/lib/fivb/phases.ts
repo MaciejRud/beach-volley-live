@@ -29,6 +29,11 @@ const MAIN_DRAW_PHASE = "4";
 /**
  * Display order within the main draw, finals first. Pools come last so the
  * decisive matches stay at the top of a long page.
+ *
+ * "Round of N" covers every elimination round between the quarterfinals and
+ * the pools -- 12, 16, 18 and 24 all occur across the tiers -- and they are
+ * ranked among themselves by field size ascending, so Round of 16 precedes
+ * Round of 24.
  */
 const MAIN_DRAW_ORDER = [
   /^final.*1st/i,
@@ -43,6 +48,12 @@ const MAIN_DRAW_ORDER = [
 function orderIndex(name: string, patterns: RegExp[]): number {
   const i = patterns.findIndex((p) => p.test(name));
   return i === -1 ? patterns.length : i;
+}
+
+/** Field size in "Round of N"; 0 when the label carries no number. */
+function roundOfSize(name: string): number {
+  const m = name.match(/^round of\s+(\d+)/i);
+  return m ? Number(m[1]) : 0;
 }
 
 /** "Round 2" sorts above "Round 1": later qualification rounds come first. */
@@ -60,10 +71,13 @@ function sortPhases(phases: PhaseGroup[], section: DrawSection): PhaseGroup[] {
     const rank = orderIndex(a.name, MAIN_DRAW_ORDER) - orderIndex(b.name, MAIN_DRAW_ORDER);
     if (rank !== 0) return rank;
 
-    // Within one round type, later match numbers are the later matches --
-    // except pools, which read naturally as A, B, C, D.
-    if (/^pool/i.test(a.name)) return a.name.localeCompare(b.name);
-    return b.name.localeCompare(a.name);
+    // Smaller field = later stage, so Round of 16 sorts above Round of 24.
+    const sizeA = roundOfSize(a.name);
+    const sizeB = roundOfSize(b.name);
+    if (sizeA && sizeB && sizeA !== sizeB) return sizeA - sizeB;
+
+    // Pools read naturally as A, B, C, D.
+    return a.name.localeCompare(b.name);
   });
 }
 

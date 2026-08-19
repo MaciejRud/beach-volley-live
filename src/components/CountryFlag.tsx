@@ -22,7 +22,7 @@ export function CountryFlag({ code, className = "" }: Props) {
       src={`https://flagcdn.com/h20/${alpha2}.png`}
       srcSet={`https://flagcdn.com/h40/${alpha2}.png 2x`}
       alt={clean}
-      className={`inline-block object-cover rounded-[2px] shrink-0 align-middle ${className}`}
+      className={`inline-block object-cover rounded-[2px] shrink-0 align-middle ring-1 ring-slate-900/40 ${className}`}
       style={{ width: "1.1em", height: "0.8em" }}
       loading="lazy"
     />

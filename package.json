@@ -11,12 +11,14 @@
     "test:fivb": "tsx src/lib/fivb/test-client.ts"
   },
   "dependencies": {
+    "@serwist/next": "^9.5.12",
     "clsx": "^2.1.1",
     "fast-xml-parser": "^4.5.1",
     "lucide-react": "^1.16.0",
     "next": "^15.1.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "serwist": "^9.5.12",
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {

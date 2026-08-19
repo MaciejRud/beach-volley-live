@@ -6,13 +6,26 @@ export const metadata: Metadata = {
   title: "Beach Volley Live | FIVB Calendar & Results",
   description: "Tournament calendar and live beach volleyball results from the FIVB Beach Pro Tour. Follow matches of Polish duos.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Beach Volley Live",
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: "#f59e0b",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // No maximumScale: pinch-zoom must stay available for accessibility.
 };
 
 export default function RootLayout({

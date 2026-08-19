@@ -45,3 +45,8 @@ claude-code-workflow.md
 beach-volley-results-prompt.md
 
 .vercel
+
+# serwist (generated service worker)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js

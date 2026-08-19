@@ -7,6 +7,9 @@ import { CountryHelper } from "@/lib/countryHelper";
 import { CountryFlag } from "@/components/CountryFlag";
 import { MatchTable } from "@/components/MatchTable";
 import { groupByDraw } from "@/lib/fivb/phases";
+
+/** Tiers whose results are published as qualification + main draw sections. */
+const PHASED_TIERS = new Set(["Elite16", "Challenge", "Futures", "Finals", "WorldChamps"]);
 import { ArrowLeft, RefreshCw } from "lucide-react";
 
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,10 +22,11 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Elite16 events run a qualification bracket plus a pooled main draw, which
-  // is worth splitting out. Other tiers stay on the flat list.
+  // Beach Pro Tour events all run a pooled main draw plus, for most tiers, a
+  // qualification bracket -- worth splitting out. National and continental
+  // events have no consistent phase data, so they stay on the flat list.
   const drawGroups = useMemo(
-    () => (tournament?.tier === "Elite16" ? groupByDraw(matches) : []),
+    () => (PHASED_TIERS.has(tournament?.tier ?? "") ? groupByDraw(matches) : []),
     [tournament?.tier, matches]
   );
 
@@ -128,6 +132,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                   key={`${group.section}-${phase.name}`}
                   matches={phase.matches}
                   title={phase.name}
+                  hidePhaseColumn
                 />
               ))}
             </section>
