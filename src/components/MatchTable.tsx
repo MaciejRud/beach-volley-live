@@ -301,7 +301,6 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
       <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-xs">
         <div className="flex items-center gap-2">
           {title && <h3 className="font-bold text-xs sm:text-sm text-slate-900">{title}</h3>}
-          <span className="text-[11px] text-slate-400 font-mono">({filtered.length})</span>
         </div>
 
       </div>
