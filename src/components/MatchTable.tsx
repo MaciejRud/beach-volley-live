@@ -208,7 +208,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
         </td>
 
         {/* Time -- own column so values line up across rows */}
-        <td className="py-1 px-2 whitespace-nowrap font-mono text-sm font-bold text-slate-700 tabular-nums">
+        <td className="py-1 px-2 whitespace-nowrap font-mono text-xs font-bold text-slate-700 tabular-nums">
           <MatchTime match={m} />
         </td>
 
@@ -315,11 +315,11 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
 
           {/* Desktop: table layout */}
           <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full min-w-[800px] table-fixed text-left text-xs border-collapse">
+            <table className="w-full min-w-[840px] table-fixed text-left text-xs border-collapse">
               {/* Fixed widths keep separate section tables aligned with each other. */}
               <colgroup>
-                <col className="w-[72px]" />
                 <col className="w-[64px]" />
+                <col className="w-[104px]" />
                 {showTournamentColumn && <col className="w-[168px]" />}
                 {!hidePhaseColumn && <col className="w-[108px]" />}
                 <col />

@@ -44,7 +44,7 @@ export function MatchTime({ match, className = "" }: Props) {
     <span className={`whitespace-nowrap ${className}`}>
       {localTime}
       <span
-        className="ml-1 font-normal text-[10px] text-slate-400"
+        className="ml-1 font-normal text-[9px] text-slate-400"
         title="Local time at the venue"
       >
         ({match.time})
