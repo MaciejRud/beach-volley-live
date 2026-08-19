@@ -75,9 +75,6 @@ export default function CalendarHomePage() {
             <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
               Beach Volleyball Tournament Calendar {new Date().getFullYear()}
             </h1>
-            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
-              12ndr Style
-            </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
             Beach Pro Tour (Elite 16, Challenge, Futures), CEV & National Tours

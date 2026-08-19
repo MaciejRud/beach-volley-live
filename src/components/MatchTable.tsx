@@ -57,6 +57,22 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
     );
   };
 
+  /**
+   * Mobile layout puts one player per line. Falls back to the combined team
+   * name for placeholder entries (TBD) where the API sends no player split.
+   */
+  const renderPlayerLines = (team: Match["teamA"]) => {
+    if (!team.player1 && !team.player2) {
+      return <div className="truncate">{team.name}</div>;
+    }
+    return (
+      <>
+        <div className="truncate">{team.player1 || "—"}</div>
+        <div className="truncate">{team.player2 || "—"}</div>
+      </>
+    );
+  };
+
   const renderMatchCards = () => {
     if (filtered.length === 0) {
       return (
@@ -109,46 +125,50 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
                 </div>
               )}
 
-              {/* Score row */}
-              <div className="flex items-center justify-between gap-2">
-                {/* Team A */}
-                <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end">
-                  <span
-                    className={`truncate text-xs ${
+              {/* Teams stay left/right; each team's two players stack vertically
+                  so full surnames fit without truncation on narrow screens. */}
+              <div className="flex items-stretch justify-between gap-2">
+                {/* Team A -- right-aligned towards the score */}
+                <div className="min-w-0 flex-1 flex items-center justify-end gap-1.5">
+                  <div
+                    className={`min-w-0 text-right text-xs leading-tight ${
                       isTeamAPolish ? "text-red-700 font-extrabold" : "text-slate-900"
                     } ${m.winner === "A" ? "font-bold text-slate-950" : "font-medium"}`}
                   >
-                    {m.teamA.name}
-                  </span>
-                  <CountryFlag code={m.teamA.countryCode} className="text-sm" />
+                    {renderPlayerLines(m.teamA)}
+                  </div>
+                  <CountryFlag code={m.teamA.countryCode} className="text-sm shrink-0" />
                 </div>
 
-                {/* Sets + scores */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[10px] font-bold text-slate-500">{m.setsWonA}</span>
-                  <span className="font-mono font-bold px-1.5 py-0.2 rounded text-xs bg-slate-100 text-slate-800">
-                    {m.setsWonA} : {m.setsWonB}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-500">{m.setsWonB}</span>
-                </div>
+                {/* Single sets tally -- the per-team numbers used to repeat it */}
+                <span className="shrink-0 self-center font-mono font-bold px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-800">
+                  {m.setsWonA} : {m.setsWonB}
+                </span>
 
-                {/* Team B */}
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <CountryFlag code={m.teamB.countryCode} className="text-sm" />
-                  <span
-                    className={`truncate text-xs ${
+                {/* Team B -- left-aligned away from the score */}
+                <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                  <CountryFlag code={m.teamB.countryCode} className="text-sm shrink-0" />
+                  <div
+                    className={`min-w-0 text-xs leading-tight ${
                       isTeamBPolish ? "text-red-700 font-extrabold" : "text-slate-900"
                     } ${m.winner === "B" ? "font-bold text-slate-950" : "font-medium"}`}
                   >
-                    {m.teamB.name}
-                  </span>
+                    {renderPlayerLines(m.teamB)}
+                  </div>
                 </div>
               </div>
 
-              {/* Set scores breakdown */}
+              {/* Set-by-set breakdown, one row per set */}
               {m.sets && m.sets.length > 0 && (
-                <div className="mt-1.5 pt-1.5 border-t border-slate-100">
-                  {renderSetScores(m)}
+                <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-0.5">
+                  {m.sets.map((set, idx) => (
+                    <div key={idx} className="flex items-center justify-between font-mono text-[10px]">
+                      <span className="text-slate-400">Set {set.setNumber || idx + 1}</span>
+                      <span className={set.isFinished ? "text-slate-600" : "text-red-600 font-bold"}>
+                        {set.scoreA} : {set.scoreB}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
             </Link>
@@ -223,7 +243,8 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="py-1.5 px-2.5 whitespace-nowrap">M# / Time</th>
+                  <th className="py-1.5 px-2.5 whitespace-nowrap">M#</th>
+                  <th className="py-1.5 px-2 whitespace-nowrap">Time</th>
                   {showTournamentColumn && (
                     <th className="py-1.5 px-3 whitespace-nowrap">Tournament</th>
                   )}
@@ -250,19 +271,17 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
                         hasPolish ? "polish-row" : ""
                       } ${isLive ? "bg-red-50/50" : ""}`}
                     >
-                      {/* Match Number / Time -- single line */}
-                      <td className="py-1 px-2.5 whitespace-nowrap font-mono text-slate-500">
-                        <span className="inline-flex items-baseline gap-1.5">
-                          {m.matchNumber && (
-                            <span className="text-[10px] text-slate-400 font-bold">
-                              M{m.matchNumber}
-                            </span>
-                          )}
-                          <span className="text-sm font-bold text-slate-700">
-                            {m.time || "-"}
-                          </span>
-                          {m.court && <span className="text-slate-400 text-[10px]">C{m.court}</span>}
+                      {/* Match number + court */}
+                      <td className="py-1 px-2.5 whitespace-nowrap font-mono text-[10px] text-slate-400">
+                        <span className="inline-flex items-baseline gap-1">
+                          <span className="font-bold">{m.matchNumber ? `M${m.matchNumber}` : "—"}</span>
+                          {m.court && <span className="text-slate-300">C{m.court}</span>}
                         </span>
+                      </td>
+
+                      {/* Time -- own column so values line up across rows */}
+                      <td className="py-1 px-2 whitespace-nowrap font-mono text-sm font-bold text-slate-700 tabular-nums">
+                        {m.time || <span className="text-slate-300 font-normal">—</span>}
                       </td>
 
                       {/* Tournament name (optional column) */}
