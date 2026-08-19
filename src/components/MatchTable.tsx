@@ -214,7 +214,10 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
 
         {/* Tournament name (optional column) */}
         {showTournamentColumn && (
-          <td className="py-1 px-3 whitespace-nowrap text-[11px] text-slate-600 max-w-[180px] truncate">
+          <td
+            className="py-1 px-3 whitespace-nowrap text-[11px] text-slate-600 max-w-[180px] truncate"
+            title={m.tournamentTitle || undefined}
+          >
             {m.tournamentTitle ? (
               <Link
                 href={`/tournaments/${m.tournamentId}`}
@@ -230,7 +233,10 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
 
         {/* Phase -- omitted when the section heading already states it */}
         {!hidePhaseColumn && (
-          <td className="py-1 px-2 truncate text-[11px] text-slate-600">
+          <td
+            className="py-1 px-2 truncate text-[11px] text-slate-600"
+            title={m.roundName || m.round || undefined}
+          >
             {m.roundName || m.round || "-"}
           </td>
         )}
@@ -239,9 +245,10 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
         <td className="py-1 px-3 text-right">
           <div className="flex items-center justify-end gap-1.5">
             <span
-              className={`truncate max-w-[140px] sm:max-w-[220px] ${
-                "text-slate-900"
-              } ${m.winner === "A" ? "font-bold text-slate-950" : ""}`}
+              title={m.teamA.name}
+              className={`truncate max-w-[140px] sm:max-w-[220px] text-slate-900 ${
+                m.winner === "A" ? "font-bold text-slate-950" : ""
+              }`}
             >
               {m.teamA.name}
             </span>
@@ -268,9 +275,10 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
           <div className="flex items-center justify-start gap-1.5">
             <CountryFlag code={m.teamB.countryCode} className="text-sm" />
             <span
-              className={`truncate max-w-[140px] sm:max-w-[220px] ${
-                "text-slate-900"
-              } ${m.winner === "B" ? "font-bold text-slate-950" : ""}`}
+              title={m.teamB.name}
+              className={`truncate max-w-[140px] sm:max-w-[220px] text-slate-900 ${
+                m.winner === "B" ? "font-bold text-slate-950" : ""
+              }`}
             >
               {m.teamB.name}
             </span>
