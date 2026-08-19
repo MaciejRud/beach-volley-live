@@ -71,8 +71,12 @@ export interface Match {
   roundPhase?: string;
   /** Pool letter for pool-stage matches (e.g. "A"). */
   roundBracket?: string;
+  /** Local date at the venue, YYYY-MM-DD. */
   date: string;
+  /** Local kick-off at the venue, HH:MM. */
   time: string;
+  /** Kick-off as an ISO instant, so clients can render it in their own zone. */
+  startsAtUtc?: string;
   court?: string;
   status: MatchStatus;
   statusCode: number;

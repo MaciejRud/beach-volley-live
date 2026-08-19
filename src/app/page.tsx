@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Tournament, Match, PolishTeamsSummary, LiveCenterData } from "@/lib/fivb/types";
 import { TournamentTable } from "@/components/TournamentTable";
 import { LiveTickerBar } from "@/components/LiveTickerBar";
-import { Trophy, Calendar, Flag, Activity, RefreshCw } from "lucide-react";
+import { Trophy, Calendar, Flag, Activity } from "lucide-react";
 
 export default function CalendarHomePage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -78,18 +78,6 @@ export default function CalendarHomePage() {
           <p className="text-xs text-slate-500 mt-0.5">
             Beach Pro Tour (Elite 16, Challenge, Futures), CEV & National Tours
           </p>
-        </div>
-
-        {/* Manual Refresh Button */}
-        <div className="flex items-center gap-2 text-xs self-start sm:self-auto">
-          <button
-            onClick={() => loadData(true)}
-            disabled={isRefreshing}
-            className="p-1.5 rounded hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer disabled:opacity-50"
-            title="Refresh data"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-          </button>
         </div>
       </div>
 

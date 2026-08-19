@@ -91,6 +91,14 @@ export class ResponseParser {
           const date = String(item["@_LocalDate"] ?? item.LocalDate ?? "");
           const rawTime = String(item["@_LocalTime"] ?? item.LocalTime ?? "");
           const time = rawTime.length >= 5 ? rawTime.slice(0, 5) : rawTime;
+          // The feed gives the same kick-off twice: local to the venue and in
+          // UTC. The UTC pair is what lets the client re-render in its own zone
+          // -- the venue's timezone itself is not resolvable from this API.
+          const utcDate = String(item["@_UtcDate"] ?? item.UtcDate ?? "");
+          const rawUtcTime = String(item["@_UtcTime"] ?? item.UtcTime ?? "");
+          const startsAtUtc =
+            utcDate && rawUtcTime ? `${utcDate}T${rawUtcTime}Z` : undefined;
+
           const court = String(item["@_Court"] ?? item.Court ?? item["@_CourtName"] ?? item.CourtName ?? "");
           const statusCode = Number(item["@_Status"] ?? item.Status ?? 1);
 
@@ -159,6 +167,7 @@ export class ResponseParser {
             roundBracket,
             date,
             time,
+            startsAtUtc,
             court,
             status,
             statusCode,

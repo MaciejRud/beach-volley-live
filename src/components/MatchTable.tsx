@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Match } from "@/lib/fivb/types";
 import { CountryHelper } from "@/lib/countryHelper";
 import { CountryFlag } from "./CountryFlag";
+import { MatchTime } from "./MatchTime";
 import { formatDateHeading, groupByDate } from "@/lib/dateFormatter";
 
 interface Props {
@@ -104,7 +105,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
     <div className="divide-y divide-slate-200">
       {groupByDate(filtered).map((group) => (
         <div key={group.date || "no-date"}>
-          <div className="sticky top-[3.25rem] z-20 px-3 py-1.5 bg-slate-100/95 backdrop-blur border-y border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+          <div className="px-3 py-1.5 bg-slate-100 border-y border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
             {formatDateHeading(group.date)}
             <span className="ml-1.5 font-mono font-bold text-slate-400">({group.items.length})</span>
           </div>
@@ -132,7 +133,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
             {m.matchNumber && <span className="font-bold">M{m.matchNumber}</span>}
-            <span className="font-bold text-slate-600">{m.time || "-"}</span>
+            <MatchTime match={m} className="font-bold text-slate-600" />
             {m.court && <span>C{m.court}</span>}
             {m.roundName && <span className="text-slate-400">• {m.roundName}</span>}
           </div>
@@ -231,7 +232,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
 
         {/* Time -- own column so values line up across rows */}
         <td className="py-1 px-2 whitespace-nowrap font-mono text-sm font-bold text-slate-700 tabular-nums">
-          {m.time || <span className="text-slate-300 font-normal">—</span>}
+          <MatchTime match={m} />
         </td>
 
         {/* Tournament name (optional column) */}
