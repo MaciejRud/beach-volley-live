@@ -46,6 +46,14 @@ export interface Team {
   countryName?: string;
   seed?: number;
   rank?: number;
+  /** Team id in the FIVB feed, used to join entry-list seeding onto a match. */
+  teamNo?: string;
+}
+
+/** Seeding for one team, read from the tournament entry list. */
+export interface TeamSeed {
+  teamNo: string;
+  seed?: number;
 }
 
 export interface Match {
@@ -61,6 +69,8 @@ export interface Match {
   round: string;
   roundName: string;
   roundPhase?: string;
+  /** Pool letter for pool-stage matches (e.g. "A"). */
+  roundBracket?: string;
   date: string;
   time: string;
   court?: string;

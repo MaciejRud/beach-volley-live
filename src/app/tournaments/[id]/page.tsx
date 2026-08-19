@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useMemo, useState, use } from "react";
 import Link from "next/link";
 import { Tournament, Match } from "@/lib/fivb/types";
 import { CountryHelper } from "@/lib/countryHelper";
 import { CountryFlag } from "@/components/CountryFlag";
 import { MatchTable } from "@/components/MatchTable";
+import { groupByDraw } from "@/lib/fivb/phases";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,6 +18,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Elite16 events run a qualification bracket plus a pooled main draw, which
+  // is worth splitting out. Other tiers stay on the flat list.
+  const drawGroups = useMemo(
+    () => (tournament?.tier === "Elite16" ? groupByDraw(matches) : []),
+    [tournament?.tier, matches]
+  );
 
   const fetchDetail = async (silent: boolean = false) => {
     try {
@@ -107,6 +115,23 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         <div className="bg-white p-10 text-center rounded-lg border border-slate-200">
           <div className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
           <p className="text-xs text-slate-500">Loading match list...</p>
+        </div>
+      ) : drawGroups.length > 0 ? (
+        <div className="space-y-5">
+          {drawGroups.map((group) => (
+            <section key={group.section} className="space-y-2.5">
+              <h2 className="text-sm font-black text-slate-900 tracking-tight">
+                Results {group.title}
+              </h2>
+              {group.phases.map((phase) => (
+                <MatchTable
+                  key={`${group.section}-${phase.name}`}
+                  matches={phase.matches}
+                  title={phase.name}
+                />
+              ))}
+            </section>
+          ))}
         </div>
       ) : (
         <MatchTable matches={matches} title="Tournament matches" />

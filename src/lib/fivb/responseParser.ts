@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { Tournament, Match, Team, SetScore, TournamentTier, TournamentCircuit, TournamentStatus, MatchStatus } from "./types";
+import { Tournament, Match, Team, TeamSeed, SetScore, TournamentTier, TournamentCircuit, TournamentStatus, MatchStatus } from "./types";
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -87,6 +87,7 @@ export class ResponseParser {
           const round = String(item["@_Round"] ?? item.Round ?? "");
           const roundName = String(item["@_RoundName"] ?? item.RoundName ?? item["@_RoundPhase"] ?? item.RoundPhase ?? round);
           const roundPhase = String(item["@_RoundPhase"] ?? item.RoundPhase ?? "");
+          const roundBracket = String(item["@_RoundBracket"] ?? item.RoundBracket ?? "");
           const date = String(item["@_LocalDate"] ?? item.LocalDate ?? "");
           const rawTime = String(item["@_LocalTime"] ?? item.LocalTime ?? "");
           const time = rawTime.length >= 5 ? rawTime.slice(0, 5) : rawTime;
@@ -101,8 +102,11 @@ export class ResponseParser {
           const teamAFed = String(item["@_TeamAFederationCode"] ?? item.TeamAFederationCode ?? "");
           const teamBFed = String(item["@_TeamBFederationCode"] ?? item.TeamBFederationCode ?? "");
 
-          const teamA = this.parseTeam(teamAName, teamAFed);
-          const teamB = this.parseTeam(teamBName, teamBFed);
+          const teamANo = String(item["@_NoTeamA"] ?? item.NoTeamA ?? "");
+          const teamBNo = String(item["@_NoTeamB"] ?? item.NoTeamB ?? "");
+
+          const teamA = this.parseTeam(teamAName, teamAFed, teamANo);
+          const teamB = this.parseTeam(teamBName, teamBFed, teamBNo);
 
           // Extract set scores
           const sets: SetScore[] = [];
@@ -152,6 +156,7 @@ export class ResponseParser {
             round,
             roundName,
             roundPhase,
+            roundBracket,
             date,
             time,
             court,
@@ -174,9 +179,11 @@ export class ResponseParser {
     }
   }
 
-  private static parseTeam(rawName: string, federationCode?: string): Team {
+  private static parseTeam(rawName: string, federationCode?: string, teamNo?: string): Team {
+    const no = teamNo && teamNo !== "0" ? teamNo : undefined;
+
     if (!rawName || rawName === "TBD") {
-      return { name: "TBD", countryCode: federationCode?.toUpperCase() || "" };
+      return { name: "TBD", countryCode: federationCode?.toUpperCase() || "", teamNo: no };
     }
 
     // Prefer federation code from API; fall back to regex extraction from name
@@ -193,7 +200,42 @@ export class ResponseParser {
       player1,
       player2,
       countryCode,
+      teamNo: no,
     };
+  }
+
+  /**
+   * Parses a tournament entry list into seeding, keyed by team id.
+   *
+   * The match list does not expose seeds (TeamASeed comes back empty), so draw
+   * positions are read here and joined onto matches via NoTeamA / NoTeamB.
+   */
+  static parseTeamSeeds(xml: string): Map<string, TeamSeed> {
+    const seeds = new Map<string, TeamSeed>();
+
+    try {
+      const parsed = xmlParser.parse(xml);
+      const root = parsed.Responses?.BeachTeams || parsed.BeachTeams || parsed;
+      const rawList = root?.BeachTeam || [];
+      const list = Array.isArray(rawList) ? rawList : [rawList];
+
+      for (const item of list) {
+        if (!item) continue;
+        const teamNo = String(item["@_No"] ?? item.No ?? "");
+        if (!teamNo) continue;
+
+        const mainPos = Number(item["@_PositionInMainDraw"] ?? item.PositionInMainDraw ?? 0);
+        const qualPos = Number(item["@_PositionInQualification"] ?? item.PositionInQualification ?? 0);
+
+        const seed = mainPos > 0 ? mainPos : qualPos > 0 ? qualPos : undefined;
+
+        seeds.set(teamNo, { teamNo, seed });
+      }
+    } catch (err) {
+      console.error("Error parsing team list XML:", err);
+    }
+
+    return seeds;
   }
 
   private static mapTournamentStatus(code: number, startDate?: string, endDate?: string): { status: TournamentStatus; statusText: string } {

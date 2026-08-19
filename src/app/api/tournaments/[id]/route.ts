@@ -13,11 +13,11 @@ export async function GET(
     const all = await FivbClient.getTournaments(season);
     const tournament = all.find((t) => t.no === id || t.id === id);
 
-    const matches = await FivbClient.getMatches(id, tournament);
+    const matches = await FivbClient.getMatchesWithSeeds(id, tournament);
 
     return NextResponse.json({ tournament, matches, count: matches.length }, {
       headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        "Cache-Control": "public, s-maxage=25, stale-while-revalidate=50",
       },
     });
   } catch (error: any) {

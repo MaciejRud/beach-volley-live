@@ -1,6 +1,6 @@
 ﻿import { RequestBuilder } from "./requestBuilder";
 import { ResponseParser } from "./responseParser";
-import { Tournament, Match, PolishTeamsSummary, LiveCenterData } from "./types";
+import { Tournament, Match, TeamSeed, PolishTeamsSummary, LiveCenterData } from "./types";
 import { globalCache } from "../cache";
 
 export class FivbClient {
@@ -74,6 +74,52 @@ export class FivbClient {
       },
       25 // 25 seconds TTL for live responsiveness
     );
+  }
+
+  /**
+   * Gets seeding for every team entered in a tournament, keyed by team id.
+   *
+   * Cached for an hour: entry lists only change when the draw is redone.
+   */
+  static async getTeamSeeds(tournamentNo: string | number): Promise<Map<string, TeamSeed>> {
+    const cacheKey = `fivb_seeds_${tournamentNo}`;
+    return globalCache.getOrSet(
+      cacheKey,
+      async () => {
+        const xmlReq = RequestBuilder.getTeamList(tournamentNo);
+        const xmlRes = await this.request(xmlReq);
+        if (!xmlRes) return new Map<string, TeamSeed>();
+
+        return ResponseParser.parseTeamSeeds(xmlRes);
+      },
+      3600 // 1 hour TTL
+    );
+  }
+
+  /**
+   * Gets a tournament's matches with entry-list seeding applied.
+   *
+   * Kept separate from getMatches so the live center, which spans dozens of
+   * tournaments, does not pay for an extra request per tournament.
+   */
+  static async getMatchesWithSeeds(
+    tournamentNo: string | number,
+    tournamentMeta?: Partial<Tournament>
+  ): Promise<Match[]> {
+    const [matches, seeds] = await Promise.all([
+      this.getMatches(tournamentNo, tournamentMeta),
+      this.getTeamSeeds(tournamentNo),
+    ]);
+
+    if (seeds.size === 0) return matches;
+
+    const withSeed = (team: Match["teamA"]): Match["teamA"] => {
+      const entry = team.teamNo ? seeds.get(team.teamNo) : undefined;
+      if (!entry) return team;
+      return { ...team, seed: entry.seed };
+    };
+
+    return matches.map((m) => ({ ...m, teamA: withSeed(m.teamA), teamB: withSeed(m.teamB) }));
   }
 
   /**

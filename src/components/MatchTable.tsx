@@ -60,6 +60,16 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
     );
   };
 
+  /** Draw position from the entry list, rendered as results pages do: "[3]". */
+  const renderSeed = (team: Match["teamA"]) => {
+    if (!team.seed) return null;
+    return (
+      <span className="ml-1 font-mono text-[10px] font-bold text-slate-400 whitespace-nowrap">
+        [{team.seed}]
+      </span>
+    );
+  };
+
   /**
    * Mobile layout puts one player per line. Falls back to the combined team
    * name for placeholder entries (TBD) where the API sends no player split.
@@ -251,6 +261,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
             >
               {m.teamA.name}
             </span>
+            {renderSeed(m.teamA)}
             <CountryFlag code={m.teamA.countryCode} className="text-sm" />
           </div>
         </td>
@@ -279,6 +290,7 @@ export function MatchTable({ matches, title, defaultOnlyPolish = false, showTour
             >
               {m.teamB.name}
             </span>
+            {renderSeed(m.teamB)}
           </div>
         </td>
 
