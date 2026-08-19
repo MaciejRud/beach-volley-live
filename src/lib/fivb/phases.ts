@@ -104,12 +104,14 @@ function buildPhases(matches: Match[], section: DrawSection): PhaseGroup[] {
 }
 
 /**
- * True once a match has actually been played or is under way. The feed lists
- * the whole main draw as empty placeholders from the moment a tournament is
- * created, so the presence of main-draw rows says nothing on its own.
+ * True once a match has a real fixture -- both teams known -- rather than being
+ * an empty bracket slot. The feed lists the whole main draw as placeholders
+ * from the moment a tournament is created, so the presence of main-draw rows
+ * says nothing on its own; named teams mean the draw has been made.
  */
-function hasStarted(m: Match): boolean {
-  return m.status === "live" || m.status === "break" || m.status === "finished";
+function isDrawn(m: Match): boolean {
+  const named = (name: string) => name !== "" && name !== "TBD";
+  return named(m.teamA.name) && named(m.teamB.name);
 }
 
 /**
@@ -117,9 +119,9 @@ function hasStarted(m: Match): boolean {
  * the feed carries no phase information, so callers can fall back to a flat
  * list rather than rendering a single meaningless section.
  *
- * Qualification leads while it is the only thing happening, then drops below
- * the main draw once main-draw matches are under way -- by that point the
- * qualification results are history.
+ * Qualification leads while it is the only thing drawn, then drops below the
+ * main draw as soon as main-draw fixtures exist -- from that point the main
+ * draw is what people came to look at.
  */
 export function groupByDraw(matches: Match[]): DrawGroup[] {
   const qualification = matches.filter((m) => m.roundPhase === QUALIFICATION_PHASE);
@@ -127,10 +129,10 @@ export function groupByDraw(matches: Match[]): DrawGroup[] {
 
   if (qualification.length === 0 && mainDraw.length === 0) return [];
 
-  const mainDrawUnderway = mainDraw.some(hasStarted);
+  const mainDrawDrawn = mainDraw.some(isDrawn);
   const groups: DrawGroup[] = [];
 
-  if (qualification.length > 0 && !mainDrawUnderway) {
+  if (qualification.length > 0 && !mainDrawDrawn) {
     groups.push({
       section: "qualification",
       title: "Qualification",
@@ -146,7 +148,7 @@ export function groupByDraw(matches: Match[]): DrawGroup[] {
     });
   }
 
-  if (qualification.length > 0 && mainDrawUnderway) {
+  if (qualification.length > 0 && mainDrawDrawn) {
     groups.push({
       section: "qualification",
       title: "Qualification",
