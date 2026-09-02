@@ -81,6 +81,18 @@ const STAT_ROWS: StatRow[] = [
   { label: "Clean digs", value: (l) => l.digExcellent, detail: true },
 ];
 
+/**
+ * A row opens a new group when it is not a detail of the one above -- Points,
+ * Attacks, Block points, Aces, Receptions, Digs. The first row needs no rule
+ * above it, so it is excluded.
+ */
+function startsGroup(index: number): boolean {
+  return index > 0 && !STAT_ROWS[index].detail;
+}
+
+/** The heavier rule that separates skill groups from each other. */
+const GROUP_RULE = "border-t-2 border-slate-300";
+
 function formatValue(row: StatRow, line: PlayerStatLine | undefined): string {
   if (!line) return "—";
   const v = row.value(line);
@@ -231,8 +243,11 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {STAT_ROWS.map((row) => (
-              <tr key={row.label} className="hover:bg-slate-50/70">
+            {STAT_ROWS.map((row, rowIndex) => (
+              <tr
+                key={row.label}
+                className={`hover:bg-slate-50/70 ${startsGroup(rowIndex) ? GROUP_RULE : ""}`}
+              >
                 <td
                   className={`py-1 px-3 whitespace-nowrap sticky left-0 bg-white ${
                     row.detail ? "pl-6 text-slate-500" : "font-semibold text-slate-800"
@@ -308,8 +323,8 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {STAT_ROWS.map((row) => (
-                  <tr key={row.label}>
+                {STAT_ROWS.map((row, rowIndex) => (
+                  <tr key={row.label} className={startsGroup(rowIndex) ? GROUP_RULE : ""}>
                     <td
                       className={`py-1 px-3 ${
                         row.detail ? "pl-5 text-slate-500" : "font-semibold text-slate-800"
