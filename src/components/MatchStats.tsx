@@ -90,8 +90,17 @@ function startsGroup(index: number): boolean {
   return index > 0 && !STAT_ROWS[index].detail;
 }
 
-/** The heavier rule that separates skill groups from each other. */
+/**
+ * The table's rules, in one place so the header and body agree.
+ *
+ * The heavy weight marks the divisions worth seeing at a glance -- skill groups
+ * across, players down, and the frame around the whole thing. Every set column
+ * gets the same light rule, so S1, S2 and Match all read as separate columns
+ * rather than the last one being special.
+ */
 const GROUP_RULE = "border-t-4 border-slate-400";
+const PLAYER_RULE = "border-l-4 border-slate-400";
+const COLUMN_RULE = "border-l border-slate-300";
 
 function formatValue(row: StatRow, line: PlayerStatLine | undefined): string {
   if (!line) return "—";
@@ -206,7 +215,7 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
     <div className="space-y-4">
       {/* Desktop: statistics down the side, players across the top, each split
           into their sets plus the match total. */}
-      <div className="hidden md:block bg-white rounded-lg border border-slate-200 shadow-xs overflow-x-auto">
+      <div className="hidden md:block bg-white rounded-lg border-2 border-slate-400 shadow-xs overflow-x-auto">
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr className="bg-slate-100/70 border-b border-slate-200">
@@ -217,7 +226,7 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                 <th
                   key={slot.player.no}
                   colSpan={setNumbers.length + 1}
-                  className="py-1.5 px-2 text-center border-l border-slate-200"
+                  className={`py-1.5 px-2 text-center ${PLAYER_RULE}`}
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <CountryFlag code={slot.countryCode} className="text-xs" />
@@ -235,12 +244,17 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                   ...setNumbers.map((n) => (
                     <th
                       key={`${slot.player.no}-s${n}`}
-                      className={`py-1 px-2 text-right font-mono border-l ${n === setNumbers[0] ? "border-slate-300" : "border-slate-100"}`}
+                      className={`py-1 px-2 text-right font-mono ${
+                        n === setNumbers[0] ? PLAYER_RULE : COLUMN_RULE
+                      }`}
                     >
                       S{n}
                     </th>
                   )),
-                  <th key={`${slot.player.no}-m`} className="py-1 px-2 text-right font-mono text-slate-600 border-l border-slate-200">
+                  <th
+                    key={`${slot.player.no}-m`}
+                    className={`py-1 px-2 text-right font-mono text-slate-600 ${COLUMN_RULE}`}
+                  >
                     Match
                   </th>,
                 ]
@@ -265,8 +279,8 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     ...setNumbers.map((n) => (
                       <td
                         key={`${slot.player.no}-s${n}-${row.label}`}
-                        className={`py-1 px-2 text-right font-mono tabular-nums text-slate-900 border-l ${
-                          n === setNumbers[0] ? "border-slate-300" : "border-slate-100"
+                        className={`py-1 px-2 text-right font-mono tabular-nums text-slate-900 ${
+                          n === setNumbers[0] ? PLAYER_RULE : COLUMN_RULE
                         }`}
                       >
                         {formatValue(row, setLine(slot.player.no, n))}
@@ -274,7 +288,7 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     )),
                     <td
                       key={`${slot.player.no}-m-${row.label}`}
-                      className={`py-1 px-2 text-right font-mono tabular-nums font-bold border-l border-slate-200 ${valueClass(
+                      className={`py-1 px-2 text-right font-mono tabular-nums font-bold ${COLUMN_RULE} ${valueClass(
                         row,
                         matchLine(slot.player.no)
                       )}`}
@@ -309,7 +323,7 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
         {slots.map((slot) => (
           <div
             key={slot.player.no}
-            className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden"
+            className="bg-white rounded-lg border-2 border-slate-400 shadow-xs overflow-hidden"
           >
             <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 border-b border-slate-200">
               <CountryFlag code={slot.countryCode} className="text-sm" />
@@ -320,11 +334,13 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                 <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
                   <th className="py-1 px-3 text-left">Statistic</th>
                   {setNumbers.map((n) => (
-                    <th key={n} className="py-1 px-1.5 text-right font-mono w-9 border-l border-slate-100">
+                    <th key={n} className={`py-1 px-1.5 text-right font-mono w-9 ${COLUMN_RULE}`}>
                       S{n}
                     </th>
                   ))}
-                  <th className="py-1 px-3 text-right font-mono text-slate-600 w-12 border-l border-slate-200">Match</th>
+                  <th className={`py-1 px-3 text-right font-mono text-slate-600 w-12 ${COLUMN_RULE}`}>
+                    Match
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -340,13 +356,13 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     {setNumbers.map((n) => (
                       <td
                         key={n}
-                        className="py-1 px-1.5 text-right font-mono tabular-nums text-slate-900 border-l border-slate-100"
+                        className={`py-1 px-1.5 text-right font-mono tabular-nums text-slate-900 ${COLUMN_RULE}`}
                       >
                         {formatValue(row, setLine(slot.player.no, n))}
                       </td>
                     ))}
                     <td
-                      className={`py-1 px-3 text-right font-mono tabular-nums font-bold border-l border-slate-200 ${valueClass(
+                      className={`py-1 px-3 text-right font-mono tabular-nums font-bold ${COLUMN_RULE} ${valueClass(
                         row,
                         matchLine(slot.player.no)
                       )}`}
