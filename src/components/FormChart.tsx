@@ -27,12 +27,16 @@ interface Metric {
   /**
    * Fixed y-axis, so two players' charts can be read against each other.
    *
-   * Chosen from the distribution across every archived tournament of every
-   * player with 20+ matches (10,492 tournament-performances): each range covers
-   * the 1st to 99th percentile with room to spare. Roughly one point in a
-   * hundred falls outside and is drawn clamped to the edge as a hollow marker,
-   * with its true value in the tooltip -- an axis that stretched to fit those
-   * would defeat the purpose of fixing it.
+   * Percentages run the full 0-100, since that is the scale a percentage is
+   * read on; attack efficiency starts at -10 because it genuinely goes
+   * negative. The counts are rounded up until the 99th percentile of every
+   * archived performance sits at or below 80% of the height, leaving headroom
+   * so a strong showing does not touch the ceiling.
+   *
+   * Ranges verified against 10,492 tournament performances by players with 20+
+   * matches. The handful above the top are drawn as triangles at the edge with
+   * the true figure in the tooltip -- an axis that stretched to fit them would
+   * defeat the purpose of fixing it.
    */
   domain: [number, number];
 }
@@ -53,7 +57,7 @@ const METRICS: Metric[] = [
     decimals: 1,
     value: (t) => ratio(t.spikePoint - t.spikeFault, t.spikeTotal),
     career: (rows) => ratio(sum(rows, "spikePoint") - sum(rows, "spikeFault"), sum(rows, "spikeTotal")),
-    domain: [0, 65],
+    domain: [-10, 100],
   },
   {
     key: "kill",
@@ -62,7 +66,7 @@ const METRICS: Metric[] = [
     decimals: 1,
     value: (t) => ratio(t.spikePoint, t.spikeTotal),
     career: (rows) => ratio(sum(rows, "spikePoint"), sum(rows, "spikeTotal")),
-    domain: [25, 75],
+    domain: [0, 100],
   },
   {
     key: "points",
@@ -71,7 +75,7 @@ const METRICS: Metric[] = [
     decimals: 1,
     value: (t) => perMatch(t.pointTotal, t.matches),
     career: (rows) => perMatch(sum(rows, "pointTotal"), sum(rows, "matches")),
-    domain: [5, 30],
+    domain: [0, 35],
   },
   {
     key: "blocks",
@@ -80,7 +84,7 @@ const METRICS: Metric[] = [
     decimals: 2,
     value: (t) => perMatch(t.blockPoint, t.matches),
     career: (rows) => perMatch(sum(rows, "blockPoint"), sum(rows, "matches")),
-    domain: [0, 7],
+    domain: [0, 9],
   },
   {
     key: "aces",
@@ -89,7 +93,7 @@ const METRICS: Metric[] = [
     decimals: 2,
     value: (t) => perMatch(t.servePoint, t.matches),
     career: (rows) => perMatch(sum(rows, "servePoint"), sum(rows, "matches")),
-    domain: [0, 5],
+    domain: [0, 6],
   },
   {
     key: "reception",
@@ -98,7 +102,7 @@ const METRICS: Metric[] = [
     decimals: 1,
     value: (t) => ratio(t.receptionFault, t.receptionTotal),
     career: (rows) => ratio(sum(rows, "receptionFault"), sum(rows, "receptionTotal")),
-    domain: [0, 25],
+    domain: [0, 100],
   },
 ];
 
