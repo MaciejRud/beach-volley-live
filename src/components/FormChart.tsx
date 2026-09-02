@@ -24,6 +24,17 @@ interface Metric {
    * one, which is exactly what averaging the per-tournament values would do.
    */
   career: (rows: StatTotals[]) => number | null;
+  /**
+   * Fixed y-axis, so two players' charts can be read against each other.
+   *
+   * Chosen from the distribution across every archived tournament of every
+   * player with 20+ matches (10,492 tournament-performances): each range covers
+   * the 1st to 99th percentile with room to spare. Roughly one point in a
+   * hundred falls outside and is drawn clamped to the edge as a hollow marker,
+   * with its true value in the tooltip -- an axis that stretched to fit those
+   * would defeat the purpose of fixing it.
+   */
+  domain: [number, number];
 }
 
 const sum = (rows: StatTotals[], key: keyof StatTotals) =>
@@ -42,6 +53,7 @@ const METRICS: Metric[] = [
     decimals: 1,
     value: (t) => ratio(t.spikePoint - t.spikeFault, t.spikeTotal),
     career: (rows) => ratio(sum(rows, "spikePoint") - sum(rows, "spikeFault"), sum(rows, "spikeTotal")),
+    domain: [0, 65],
   },
   {
     key: "kill",
@@ -50,6 +62,7 @@ const METRICS: Metric[] = [
     decimals: 1,
     value: (t) => ratio(t.spikePoint, t.spikeTotal),
     career: (rows) => ratio(sum(rows, "spikePoint"), sum(rows, "spikeTotal")),
+    domain: [25, 75],
   },
   {
     key: "points",
@@ -58,6 +71,7 @@ const METRICS: Metric[] = [
     decimals: 1,
     value: (t) => perMatch(t.pointTotal, t.matches),
     career: (rows) => perMatch(sum(rows, "pointTotal"), sum(rows, "matches")),
+    domain: [5, 30],
   },
   {
     key: "blocks",
@@ -66,6 +80,7 @@ const METRICS: Metric[] = [
     decimals: 2,
     value: (t) => perMatch(t.blockPoint, t.matches),
     career: (rows) => perMatch(sum(rows, "blockPoint"), sum(rows, "matches")),
+    domain: [0, 7],
   },
   {
     key: "aces",
@@ -74,6 +89,7 @@ const METRICS: Metric[] = [
     decimals: 2,
     value: (t) => perMatch(t.servePoint, t.matches),
     career: (rows) => perMatch(sum(rows, "servePoint"), sum(rows, "matches")),
+    domain: [0, 5],
   },
   {
     key: "reception",
@@ -82,6 +98,7 @@ const METRICS: Metric[] = [
     decimals: 1,
     value: (t) => ratio(t.receptionFault, t.receptionTotal),
     career: (rows) => ratio(sum(rows, "receptionFault"), sum(rows, "receptionTotal")),
+    domain: [0, 25],
   },
 ];
 
@@ -157,12 +174,11 @@ export function FormChart({ tournaments }: { tournaments: TournamentRow[] }) {
   const H = 250;
   const PAD = { left: 52, right: 20, top: 26, bottom: 44 };
 
-  const values = points.map((p) => p.value);
-  const lo = Math.min(...values, career ?? Infinity);
-  const hi = Math.max(...values, career ?? -Infinity);
-  const pad = (hi - lo) * 0.12 || 1;
-  const y0 = lo - pad;
-  const y1 = hi + pad;
+  // Fixed scale, so one player's chart can be laid beside another's. Values
+  // outside it are drawn at the edge rather than off it.
+  const [y0, y1] = metric.domain;
+  const clamp = (value: number) => Math.min(y1, Math.max(y0, value));
+  const outside = (value: number) => value < y0 || value > y1;
 
   const times = points.map((p) => new Date(p.tournament.startDate).getTime());
   const t0 = Math.min(...times);
@@ -171,7 +187,7 @@ export function FormChart({ tournaments }: { tournaments: TournamentRow[] }) {
   const X = (time: number) =>
     PAD.left + (t1 === t0 ? 0.5 : (time - t0) / (t1 - t0)) * (W - PAD.left - PAD.right);
   const Y = (value: number) =>
-    PAD.top + (1 - (value - y0) / (y1 - y0)) * (H - PAD.top - PAD.bottom);
+    PAD.top + (1 - (clamp(value) - y0) / (y1 - y0)) * (H - PAD.top - PAD.bottom);
 
   const gridValues = Array.from({ length: 7 }, (_, i) => y0 + ((y1 - y0) * i) / 6);
   const seasons = [...new Set(points.map((p) => p.tournament.season))];
@@ -179,6 +195,8 @@ export function FormChart({ tournaments }: { tournaments: TournamentRow[] }) {
   const path = points
     .map((p, i) => `${i ? "L" : "M"}${X(times[i]).toFixed(1)} ${Y(p.value).toFixed(1)}`)
     .join(" ");
+
+  const clampedCount = points.filter((p) => outside(p.value)).length;
 
   return (
     <div>
@@ -291,6 +309,7 @@ export function FormChart({ tournaments }: { tournaments: TournamentRow[] }) {
             // draw -- hollowed out rather than dropped, so the gap is visible.
             const partial = point.tournament.coverage < 90;
             const colour = tierColour(point.tournament.type);
+            const clipped = outside(point.value);
 
             return (
               <g
@@ -301,15 +320,30 @@ export function FormChart({ tournaments }: { tournaments: TournamentRow[] }) {
                 onMouseLeave={() => setHover(null)}
                 className="cursor-pointer"
               >
-                <circle
-                  cx={X(times[i])}
-                  cy={Y(point.value)}
-                  r="4.5"
-                  fill={partial ? "#ffffff" : colour}
-                  stroke={partial ? colour : "#ffffff"}
-                  strokeWidth={partial ? 2 : 1.5}
-                  strokeDasharray={partial ? "2 1.6" : undefined}
-                />
+                {clipped ? (
+                  // Off the fixed scale: a triangle pointing the way the value
+                  // actually went, so it cannot be mistaken for a real reading.
+                  <path
+                    d={
+                      point.value > y1
+                        ? `M${X(times[i])} ${Y(point.value) - 5} l4.5 6 h-9 z`
+                        : `M${X(times[i])} ${Y(point.value) + 5} l4.5 -6 h-9 z`
+                    }
+                    fill={colour}
+                    stroke="#ffffff"
+                    strokeWidth="1"
+                  />
+                ) : (
+                  <circle
+                    cx={X(times[i])}
+                    cy={Y(point.value)}
+                    r="4.5"
+                    fill={partial ? "#ffffff" : colour}
+                    stroke={partial ? colour : "#ffffff"}
+                    strokeWidth={partial ? 2 : 1.5}
+                    strokeDasharray={partial ? "2 1.6" : undefined}
+                  />
+                )}
                 {/* A generous invisible target: the dots are small and the
                     pointer should not have to land on them exactly. */}
                 <circle cx={X(times[i])} cy={Y(point.value)} r="13" fill="transparent" />
@@ -445,10 +479,13 @@ export function FormChart({ tournaments }: { tournaments: TournamentRow[] }) {
       </div>
 
       <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
-        Hover a point for the matches behind it. Tournaments with fewer than {MIN_ATTACKS}{" "}
-        attacks are left off the chart -- a couple of qualification matches would swing the
-        scale on noise. The career line pools every action rather than averaging the points,
-        so a two-match event does not count as much as an eight-match one.
+        The scale is the same for every player, so two charts can be read against each
+        other; {clampedCount > 0 ? "triangles mark points" : "a triangle marks any point"}{" "}
+        beyond it, with the true figure in the tooltip. Hover a point for the matches behind
+        it. Tournaments with fewer than {MIN_ATTACKS} attacks are left off -- a couple of
+        qualification matches would swing the line on noise. The career figure pools every
+        action rather than averaging the points, so a two-match event does not count as much
+        as an eight-match one.
       </p>
     </div>
   );

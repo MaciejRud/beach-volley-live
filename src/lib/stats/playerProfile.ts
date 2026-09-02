@@ -192,6 +192,12 @@ export async function loadPlayerProfile(playerNo: string): Promise<PlayerProfile
   const entry = aggregates?.players[playerNo];
   if (!aggregates || !entry) return null;
 
+  // The aggregate file still holds everyone, so that season rankings are drawn
+  // from the whole field. The form file holds only the players the section
+  // lists -- absence from it means this player is below the listing threshold
+  // and has no page.
+  if (form && !form.players[playerNo]) return null;
+
   const known = directory?.[playerNo];
   const gender = known?.gender ?? entry.gender;
 

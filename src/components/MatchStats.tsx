@@ -235,12 +235,12 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                   ...setNumbers.map((n) => (
                     <th
                       key={`${slot.player.no}-s${n}`}
-                      className={`py-1 px-2 text-right font-mono ${n === setNumbers[0] ? "border-l border-slate-200" : ""}`}
+                      className={`py-1 px-2 text-right font-mono border-l ${n === setNumbers[0] ? "border-slate-300" : "border-slate-100"}`}
                     >
                       S{n}
                     </th>
                   )),
-                  <th key={`${slot.player.no}-m`} className="py-1 px-2 text-right font-mono text-slate-600">
+                  <th key={`${slot.player.no}-m`} className="py-1 px-2 text-right font-mono text-slate-600 border-l border-slate-200">
                     Match
                   </th>,
                 ]
@@ -265,8 +265,8 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     ...setNumbers.map((n) => (
                       <td
                         key={`${slot.player.no}-s${n}-${row.label}`}
-                        className={`py-1 px-2 text-right font-mono tabular-nums text-slate-900 ${
-                          n === setNumbers[0] ? "border-l border-slate-200" : ""
+                        className={`py-1 px-2 text-right font-mono tabular-nums text-slate-900 border-l ${
+                          n === setNumbers[0] ? "border-slate-300" : "border-slate-100"
                         }`}
                       >
                         {formatValue(row, setLine(slot.player.no, n))}
@@ -274,7 +274,7 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     )),
                     <td
                       key={`${slot.player.no}-m-${row.label}`}
-                      className={`py-1 px-2 text-right font-mono tabular-nums font-bold ${valueClass(
+                      className={`py-1 px-2 text-right font-mono tabular-nums font-bold border-l border-slate-200 ${valueClass(
                         row,
                         matchLine(slot.player.no)
                       )}`}
@@ -320,11 +320,11 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                 <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
                   <th className="py-1 px-3 text-left">Statistic</th>
                   {setNumbers.map((n) => (
-                    <th key={n} className="py-1 px-1.5 text-right font-mono w-9">
+                    <th key={n} className="py-1 px-1.5 text-right font-mono w-9 border-l border-slate-100">
                       S{n}
                     </th>
                   ))}
-                  <th className="py-1 px-3 text-right font-mono text-slate-600 w-12">Match</th>
+                  <th className="py-1 px-3 text-right font-mono text-slate-600 w-12 border-l border-slate-200">Match</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -340,13 +340,13 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     {setNumbers.map((n) => (
                       <td
                         key={n}
-                        className="py-1 px-1.5 text-right font-mono tabular-nums text-slate-900"
+                        className="py-1 px-1.5 text-right font-mono tabular-nums text-slate-900 border-l border-slate-100"
                       >
                         {formatValue(row, setLine(slot.player.no, n))}
                       </td>
                     ))}
                     <td
-                      className={`py-1 px-3 text-right font-mono tabular-nums font-bold ${valueClass(
+                      className={`py-1 px-3 text-right font-mono tabular-nums font-bold border-l border-slate-200 ${valueClass(
                         row,
                         matchLine(slot.player.no)
                       )}`}

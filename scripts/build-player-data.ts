@@ -150,7 +150,22 @@ async function main() {
     }
   }
 
-  const players: PlayerIndexEntry[] = [...careerMatches.keys()]
+  // Everyone below this has too little behind them to describe: a handful of
+  // qualification matches produces averages that swing on a single bad day, and
+  // they crowd out the players anyone is actually looking for.
+  const MIN_CAREER_MATCHES = 10;
+
+  const listed = new Set(
+    [...careerMatches.keys()].filter(
+      (playerNo) => (careerMatches.get(playerNo) ?? 0) >= MIN_CAREER_MATCHES
+    )
+  );
+
+  for (const playerNo of Object.keys(form)) {
+    if (!listed.has(playerNo)) delete form[playerNo];
+  }
+
+  const players: PlayerIndexEntry[] = [...listed]
     .map((playerNo) => {
       const known = directory[playerNo];
       return {
