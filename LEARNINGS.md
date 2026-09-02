@@ -101,3 +101,94 @@ zachowanie HTML.
 
 Naprawa: `table-fixed` + jawny `<colgroup>` ze stałymi szerokościami. Wszystkie
 sekcje na stronie dostają identyczną siatkę.
+
+## 2026-09-02: Próg odcięcia mierzył nie to, co trzeba
+
+W tabeli meczu ukrywałem procent, gdy prób było mniej niż 10 - żeby "nie
+pokazywać statystyki z małej próbki". Właściciel zobaczył wiersz `Kill %`:
+41,7%, kreska, i **60,0%** jako wartość meczową. Wygląda na błąd w liczbach.
+
+Liczby były poprawne. Ukryty set to `7/8 = 87,5%`, mecz to `(5+7)/(12+8) = 60%`.
+Problem był w tym, że **kreska stała w miejscu najwyższej z trzech wartości**,
+więc kolumna obok i suma zaprzeczały czemuś, czego nie było widać.
+
+Najpierw obniżyłem próg do 5. To było leczenie objawu - zmierzyłem, że mediana
+ataków w secie to 10,5, więc próg 10 chował **42% wszystkich kolumn setowych**.
+Właściciel zakwestionował jednak sam pomysł progu i miał rację: dwa ataki na dwa
+to naprawdę 100%, a w szczegółach jednego meczu to jest fakt, nie próbka, przed
+którą trzeba chronić czytelnika.
+
+Sedno: **próg mierzył liczbę prób w komórce, a pytanie brzmiało "czy ten
+zawodnik ma dość materiału, żeby go oceniać"**. To dwie różne rzeczy. Ta druga
+decyzja i tak już zapadała gdzie indziej - przy wpuszczaniu na listę (10 meczów
+kariery) i do rankingu (8 meczów w sezonie). Próg w komórce dublował ją w złym
+miejscu i na złej podstawie.
+
+Reguła: filtr jakości danych stosuje się **raz, przy wejściu do zbioru**, a nie
+ponownie przy każdym renderowaniu. Jeśli ktoś jest w zestawieniu, to jego mecz z
+dziewięcioma atakami też się liczy - inaczej suma przestaje odpowiadać składnikom.
+
+Przy okazji wyszło, że agregaty sezonowe nigdy tego progu nie miały (osobna
+funkcja w `playerFiles.ts`), więc mecz z 9 atakami zawsze wchodził do sezonu.
+Sprawdzone na Artacho Del Solar 2022: dwa takie mecze, `47,48%` z nimi i bez
+różnicy w wyniku - bo agregat sumuje akcje, nie uśrednia procentów.
+
+## 2026-09-02: 25 nazw kluczy razy 250 wierszy to pięciokrotność pliku
+
+Plan zakładał ~11,6 KB JSON na turniej. Pierwsza wersja zapisu dała **108 KB**,
+czyli 22 MB na całe archiwum zamiast 3. Różnica to wyłącznie powtarzane nazwy
+pól: 25 kluczy przy każdym z ~250 wierszy.
+
+Przejście na krotki pozycyjne z kolejnością kolumn zapisaną w pliku
+(`columns: [...]`) dało **11,3 KB** - dokładnie tyle, ile zakładał plan.
+
+Dwie rzeczy warte zapamiętania. Po pierwsze: sprawdziłem to **zanim**
+wygenerowałem 194 pliki, więc nie było migracji. Po drugie: kolejność kolumn
+siedzi w każdym pliku osobno, a dekoder czyta ją stamtąd, nie ze stałej w
+kodzie - dzięki temu dopisanie kolumny w przyszłości nie unieważni starych
+plików. Kolejność jest **append-only**; przestawienie jej po cichu przekłamuje
+każdą liczbę w archiwum.
+
+## 2026-09-02: Link do prototypu w planie to nie ozdobnik
+
+Plan wdrożenia miał w nagłówku link do artefaktu z prototypem. Zbudowałem trzy
+etapy **wyłącznie z opisu prozą** w sekcji 6, nie otwierając go ani razu.
+Właściciel zapytał, czemu układ różni się od tego, co wspólnie oceniali.
+
+Różnica nie była kosmetyczna: prototyp miał trzy sekcje, których u mnie nie było
+w ogóle (rozkład pochodzenia punktów jako pasek, rozkład zakończeń akcji,
+percentyle jako kropka na skali), a ja zrobiłem z nich tabele i szary tekst.
+
+Proza opisuje **co** ma być na ekranie. Prototyp pokazuje **jak to ma wyglądać**
+- i to jest informacja, której zdanie "tabela z percentylami" nie niesie.
+Jeśli plan odsyła do artefaktu, makiety albo zrzutu, otwieram to przed
+pierwszą linijką kodu, a nie po pytaniu "czemu inaczej".
+
+## 2026-09-02: z-index nie przebije sticky ani overflow
+
+Dymek z definicją statystyki chował się za komórkami tabeli mimo `z-50`.
+Podbijanie wartości nic nie dawało, bo problem nie był w warstwach.
+
+Komórka etykiety jest `sticky`, a kontener tabeli ma `overflow-x-auto` -
+**każde z tych dwóch tworzy własny kontekst nakładania**. Element wewnątrz
+takiego kontekstu nie może wyjść ponad rodzeństwo tego kontekstu, choćby miał
+`z-index: 9999`. To ten sam mechanizm, przez który `position: fixed` przestaje
+być względne do okna, gdy przodek ma `transform`.
+
+Rozwiązanie: `createPortal` do `document.body`. Panel opuszcza drzewo tabeli i
+pozycjonuje się względem kursora przez `position: fixed`.
+
+Objaw myli, bo wygląda jak problem z kolejnością warstw. Kiedy `z-index` nie
+działa, pytanie brzmi nie "za mało", tylko **"czyj to kontekst nakładania"**.
+
+## 2026-09-02: Cron w Actions i lokalna praca potrafią się rozminąć
+
+Uruchomiłem workflow ręcznie, żeby sprawdzić, czy przechodzi. Przeszedł i
+zacommitował `data/player-index.json` przebudowany **starą** wersją skryptu -
+sprzed zmiany sortowania, którą właśnie robiłem lokalnie. Push odbił się
+konfliktem.
+
+Rozwiązanie było proste (rebase, przegenerowanie pliku, moja wersja wygrywa),
+ale mechanizm warto pamiętać: **bot commituje pliki wynikowe, więc każda lokalna
+zmiana generatora kłóci się z jego ostatnim przebiegiem**. Przy pracy nad
+czymkolwiek, co produkuje zawartość `data/`, najpierw `git pull`.
