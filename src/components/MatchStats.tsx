@@ -2,6 +2,7 @@
 
 import { Match, PlayerRef, PlayerStatLine, MatchStatistics, TeamEntry } from "@/lib/fivb/types";
 import {
+  MIN_ATTEMPTS_FOR_PERCENT,
   spikeSuccess,
   spikeEfficiency,
   blockSuccess,
@@ -398,8 +399,8 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
           </>
         )}
         Kill % counts points only; efficiency subtracts errors and can be negative.
-        Percentages are hidden below 10 attempts, where they would say more about the
-        sample than about the player. Reception has no positive grade in the FIVB feed,
+        Percentages are hidden below {MIN_ATTEMPTS_FOR_PERCENT} attempts, where they would
+        say more about the sample than about the player. Reception has no positive grade in the FIVB feed,
         so only errors are reported.
       </p>
       {/* Where each team's points came from, set by set. The opponent-errors

@@ -10,10 +10,16 @@ import { PlayerStatLine, SetScore, TeamPointBreakdown } from "./types";
 
 /**
  * Below this many attempts a percentage says more about the sample than about
- * the player -- a blocker can genuinely finish a match with six spikes. Absolute
- * counts are always shown; percentages are suppressed.
+ * the player. Absolute counts are always shown; percentages are suppressed.
+ *
+ * Set at five because a single set is the smallest thing shown: a player takes
+ * a median of 10 or 11 attacks in one, so a threshold of ten hid 42% of all
+ * set columns -- and a hidden column reads as a contradiction when the set
+ * beside it and the match total are both there. Five hides 3.6% of sets and
+ * 0.1% of matches, which is about the rate at which a percentage genuinely
+ * means nothing.
  */
-export const MIN_ATTEMPTS_FOR_PERCENT = 10;
+export const MIN_ATTEMPTS_FOR_PERCENT = 5;
 
 /** Returns a percentage, or null when the denominator is too small to mean anything. */
 function ratio(numerator: number, denominator: number): number | null {
