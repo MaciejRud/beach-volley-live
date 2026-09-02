@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Match, PlayerRef, PlayerStatLine, MatchStatistics, TeamEntry } from "@/lib/fivb/types";
 import {
   spikeSuccess,
@@ -51,34 +53,130 @@ interface StatRow {
   signed?: boolean;
   /** Errors: doing more of it than usual is a worse match, not a better one. */
   lowerIsBetter?: boolean;
+  /**
+   * What the row means, shown on hovering the label.
+   *
+   * Plain counts get a line saying what is being counted; the derived figures
+   * get the formula, because "efficiency" and "serve risk" are conventions a
+   * reader has no way to guess.
+   */
+  definition: string;
 }
 
 const STAT_ROWS: StatRow[] = [
-  { label: "Points", value: (l) => l.pointTotal },
-  { label: "Attacks", value: (l) => l.spikeTotal },
-  { label: "Kills", value: (l) => l.spikePoint, detail: true },
-  { label: "Attack errors", value: (l) => l.spikeFault, detail: true, lowerIsBetter: true },
-  { label: "Kill %", value: spikeSuccess, percent: true, detail: true },
-  { label: "Efficiency", value: spikeEfficiency, percent: true, detail: true, signed: true },
-  { label: "Block points", value: (l) => l.blockPoint },
-  { label: "Block touches", value: (l) => l.blockTotal, detail: true },
-  { label: "Block %", value: blockSuccess, percent: true, detail: true },
-  { label: "Aces", value: (l) => l.servePoint },
-  { label: "Serve errors", value: (l) => l.serveFault, detail: true, lowerIsBetter: true },
+  {
+    label: "Points",
+    value: (l) => l.pointTotal,
+    definition: "Points won by this player: kills, block points and aces added together.",
+  },
+  {
+    label: "Attacks",
+    value: (l) => l.spikeTotal,
+    definition: "Every attack the player hit, however it ended.",
+  },
+  {
+    label: "Kills",
+    value: (l) => l.spikePoint,
+    detail: true,
+    definition: "Attacks that won the rally outright.",
+  },
+  {
+    label: "Attack errors",
+    value: (l) => l.spikeFault,
+    detail: true,
+    lowerIsBetter: true,
+    definition:
+      "Attacks that lost the rally -- into the net, out, or stopped by the block. FIVB counts a blocked attack here, so it needs no separate line.",
+  },
+  {
+    label: "Kill %",
+    value: spikeSuccess,
+    percent: true,
+    detail: true,
+    definition: "Kills ÷ attacks. Counts only the points, so it is never negative.",
+  },
+  {
+    label: "Efficiency",
+    value: spikeEfficiency,
+    percent: true,
+    detail: true,
+    signed: true,
+    definition:
+      "(Kills − attack errors) ÷ attacks. Goes negative when a player made more attack errors than points, which is why it says more about a match than kill % does.",
+  },
+  {
+    label: "Block points",
+    value: (l) => l.blockPoint,
+    definition: "Blocks that ended the rally on the spot.",
+  },
+  {
+    label: "Block touches",
+    value: (l) => l.blockTotal,
+    detail: true,
+    definition: "Every time the player's block touched the ball, scoring or not.",
+  },
+  {
+    label: "Block %",
+    value: blockSuccess,
+    percent: true,
+    detail: true,
+    definition: "Block points ÷ block touches: how often a touch finished the rally.",
+  },
+  {
+    label: "Aces",
+    value: (l) => l.servePoint,
+    definition: "Serves that won the point immediately.",
+  },
+  {
+    label: "Serve errors",
+    value: (l) => l.serveFault,
+    detail: true,
+    lowerIsBetter: true,
+    definition: "Serves into the net or out.",
+  },
   // Serve risk is deliberately unmarked: aces and errors move together, so
   // neither more nor less of it is plainly better.
-  { label: "Serve risk %", value: serveRisk, percent: true, detail: true },
-  { label: "Receptions", value: (l) => l.receptionTotal },
-  { label: "Reception errors", value: (l) => l.receptionFault, detail: true, lowerIsBetter: true },
+  {
+    label: "Serve risk %",
+    value: serveRisk,
+    percent: true,
+    detail: true,
+    definition:
+      "(Aces + serve errors) ÷ serves: the share of serves that ended the rally one way or the other. High means an aggressive server -- neither good nor bad on its own, since aces and errors rise together.",
+  },
+  {
+    label: "Receptions",
+    value: (l) => l.receptionTotal,
+    definition: "Serves the player received.",
+  },
+  {
+    label: "Reception errors",
+    value: (l) => l.receptionFault,
+    detail: true,
+    lowerIsBetter: true,
+    definition: "Receptions that lost the point outright.",
+  },
   {
     label: "Reception error %",
     value: receptionFaultRate,
     percent: true,
     detail: true,
     lowerIsBetter: true,
+    definition:
+      "Reception errors ÷ receptions. Errors are all the FIVB feed reports for reception -- it grades nothing positively -- so a low number is the only good news here.",
   },
-  { label: "Digs", value: (l) => l.digTotal },
-  { label: "Clean digs", value: (l) => l.digExcellent, detail: true },
+  {
+    label: "Digs",
+    value: (l) => l.digTotal,
+    definition: "Every defensive touch on an opponent's attack.",
+  },
+  {
+    label: "Clean digs",
+    value: (l) => l.digExcellent,
+    detail: true,
+    definition:
+      "Digs controlled well enough to attack from. A dig never scores, so this is the best outcome the statistic has.",
+  },
 ];
 
 /**
@@ -155,6 +253,49 @@ function valueClass(row: StatRow, line: PlayerStatLine | undefined): string {
   const v = row.value(line);
   if (v === null) return "text-slate-400";
   return v < 0 ? "text-red-600" : "text-slate-900";
+}
+
+/**
+ * A row label that explains itself on hover.
+ *
+ * Fixed positioning rather than absolute: the table scrolls horizontally and
+ * the label cell is sticky, so an absolutely positioned panel would be clipped
+ * by the scroll container. Following the pointer avoids that entirely.
+ */
+function StatLabel({ row, className }: { row: StatRow; className: string }) {
+  const [at, setAt] = useState<{ x: number; y: number } | null>(null);
+
+  return (
+    <>
+      <span
+        className={`${className} cursor-help decoration-dotted decoration-slate-300 underline-offset-2 hover:underline`}
+        onMouseEnter={(e) => setAt({ x: e.clientX, y: e.clientY })}
+        onMouseMove={(e) => setAt({ x: e.clientX, y: e.clientY })}
+        onMouseLeave={() => setAt(null)}
+      >
+        {row.label}
+      </span>
+
+      {at &&
+        // Rendered into the body: the label cell is sticky and inside a
+        // scrolling table, both of which create stacking contexts the panel
+        // would otherwise be trapped behind whatever its z-index.
+        createPortal(
+          <div
+            role="tooltip"
+            style={{
+              left: Math.min(at.x + 14, window.innerWidth - 264),
+              top: Math.min(at.y + 18, window.innerHeight - 130),
+            }}
+            className="pointer-events-none fixed z-50 w-[248px] rounded-md border border-slate-200 bg-white shadow-lg px-2.5 py-2 text-[11px] font-normal leading-relaxed text-slate-600"
+          >
+            <div className="font-bold text-slate-900 mb-0.5">{row.label}</div>
+            {row.definition}
+          </div>,
+          document.body
+        )}
+    </>
+  );
 }
 
 export function MatchStats({ match, roster, stats, seasonAverages = {}, season }: Props) {
@@ -267,12 +408,11 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                 key={row.label}
                 className={`hover:bg-slate-50/70 ${startsGroup(rowIndex) ? GROUP_RULE : ""}`}
               >
-                <td
-                  className={`py-1 px-3 whitespace-nowrap sticky left-0 bg-white ${
-                    row.detail ? "pl-6 text-slate-500" : "font-semibold text-slate-800"
-                  }`}
-                >
-                  {row.label}
+                <td className="py-1 px-3 whitespace-nowrap sticky left-0 bg-white">
+                  <StatLabel
+                    row={row}
+                    className={row.detail ? "pl-3 text-slate-500" : "font-semibold text-slate-800"}
+                  />
                 </td>
                 {slots.map((slot) =>
                   [
@@ -346,12 +486,11 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
               <tbody className="divide-y divide-slate-100">
                 {STAT_ROWS.map((row, rowIndex) => (
                   <tr key={row.label} className={startsGroup(rowIndex) ? GROUP_RULE : ""}>
-                    <td
-                      className={`py-1 px-3 ${
-                        row.detail ? "pl-5 text-slate-500" : "font-semibold text-slate-800"
-                      }`}
-                    >
-                      {row.label}
+                    <td className="py-1 px-3">
+                      <StatLabel
+                        row={row}
+                        className={row.detail ? "pl-2 text-slate-500" : "font-semibold text-slate-800"}
+                      />
                     </td>
                     {setNumbers.map((n) => (
                       <td
