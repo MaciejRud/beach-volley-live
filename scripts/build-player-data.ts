@@ -41,6 +41,9 @@ async function main() {
   for (const tournament of ordered) {
     const perPlayer = new Map<string, StatTotals>();
     const perPlayerMatches = new Map<string, PlayerFormMatch[]>();
+    const perPlayerWins = new Map<string, number>();
+    const perPlayerTeamPoints = new Map<string, number>();
+    const perPlayerPairPoints = new Map<string, number>();
 
     // Matches in playing order, so a tournament's tooltip reads first round
     // downwards. Match numbers rise through the draw.
@@ -48,6 +51,23 @@ async function main() {
 
     for (const matchNo of matchNumbers) {
       const info = tournament.matchInfo?.[matchNo];
+
+      // Points scored by each side in this match, read off the set scores.
+      const sideScores = { A: 0, B: 0 };
+      for (const set of info?.s.split(", ") ?? []) {
+        const [a, b] = set.split(":").map(Number);
+        if (Number.isFinite(a)) sideScores.A += a;
+        if (Number.isFinite(b)) sideScores.B += b;
+      }
+
+      // The pair's own scoring, needed before the per-player loop so both
+      // partners' points are counted for each of them.
+      const pairPoints = { A: 0, B: 0 };
+      for (const tuple of tournament.matches[matchNo]) {
+        const line = decodeStatTuple(tuple, tournament.columns);
+        if (info?.pa.includes(line.playerNo)) pairPoints.A += line.pointTotal;
+        else if (info?.pb.includes(line.playerNo)) pairPoints.B += line.pointTotal;
+      }
 
       for (const tuple of tournament.matches[matchNo]) {
         const line = decodeStatTuple(tuple, tournament.columns);
@@ -70,6 +90,18 @@ async function main() {
         const matchTotals = emptyTotals();
         addLine(matchTotals, line);
 
+        const side = onA ? "A" : "B";
+        const won = info.w === side;
+        if (won) perPlayerWins.set(line.playerNo, (perPlayerWins.get(line.playerNo) ?? 0) + 1);
+        perPlayerTeamPoints.set(
+          line.playerNo,
+          (perPlayerTeamPoints.get(line.playerNo) ?? 0) + sideScores[side]
+        );
+        perPlayerPairPoints.set(
+          line.playerNo,
+          (perPlayerPairPoints.get(line.playerNo) ?? 0) + pairPoints[side]
+        );
+
         (perPlayerMatches.get(line.playerNo) ??
           perPlayerMatches.set(line.playerNo, []).get(line.playerNo)!)
           .push({
@@ -81,7 +113,7 @@ async function main() {
                   .split(", ")
                   .map((set) => set.split(":").reverse().join(":"))
                   .join(", "),
-            w: info.w === (onA ? "A" : "B"),
+            w: won,
             t: encodeTotals(matchTotals),
           });
       }
@@ -104,6 +136,9 @@ async function main() {
         type: tournament.type,
         coverage,
         totals: encodeTotals(totals),
+        won: perPlayerWins.get(playerNo) ?? 0,
+        teamPoints: perPlayerTeamPoints.get(playerNo) ?? 0,
+        pairPoints: perPlayerPairPoints.get(playerNo) ?? 0,
         matches: perPlayerMatches.get(playerNo) ?? [],
       });
 

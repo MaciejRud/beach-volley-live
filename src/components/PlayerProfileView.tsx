@@ -29,12 +29,23 @@ const METRICS: {
   { key: "receptionFaultRate", label: "Reception errors", format: (v) => `${v.toFixed(1)}%`, higherIsBetter: false },
 ];
 
-function percentileClass(percentile: number, higherIsBetter: boolean): string {
-  const strong = higherIsBetter ? percentile >= 75 : percentile <= 25;
-  const weak = higherIsBetter ? percentile <= 25 : percentile >= 75;
-  if (strong) return "text-emerald-600";
-  if (weak) return "text-red-600";
+/**
+ * Colours a placing by where it falls in the field.
+ *
+ * Read as a share rather than an absolute number: 20th means something very
+ * different in a field of 25 than in a field of 200.
+ */
+function rankClass(place: number, outOf: number): string {
+  const share = place / outOf;
+  if (share <= 0.25) return "text-emerald-600";
+  if (share >= 0.75) return "text-red-600";
   return "text-slate-400";
+}
+
+function ordinal(n: number): string {
+  const rest = n % 100;
+  if (rest >= 11 && rest <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
 }
 
 /**
@@ -46,18 +57,9 @@ function totalsAsLine(totals: StatTotals): PlayerStatLine {
   return { ...totals, playerNo: "" } as unknown as PlayerStatLine;
 }
 
-function careerRow(label: string, value: string) {
-  return (
-    <div className="flex items-baseline justify-between gap-2 py-1">
-      <span className="text-[11px] text-slate-500">{label}</span>
-      <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">{value}</span>
-    </div>
-  );
-}
-
-function perMatch(totals: StatTotals, key: keyof StatTotals): string {
+function perMatch(totals: StatTotals, key: keyof StatTotals, decimals = 1): string {
   if (totals.matches === 0) return "—";
-  return ((totals[key] as number) / totals.matches).toFixed(1);
+  return ((totals[key] as number) / totals.matches).toFixed(decimals);
 }
 
 export function PlayerProfileView({
@@ -73,6 +75,45 @@ export function PlayerProfileView({
   // in which the player met the sample threshold.
   const rankedSeason = profile.seasons.find((s) => Object.keys(s.percentiles).length > 0);
 
+  const { summary } = profile;
+  const played = summary.won + summary.lost;
+
+  const kpis: { label: string; value: string; note?: string }[] = [
+    {
+      label: "Tournaments",
+      value: String(summary.tournaments),
+      note: `${summary.matches} matches`,
+    },
+    {
+      label: "Record",
+      value: `${summary.won}–${summary.lost}`,
+      note: played > 0 ? `${((summary.won / played) * 100).toFixed(0)}% won` : undefined,
+    },
+    {
+      label: "Efficiency",
+      value: career.spikeEfficiency === null ? "—" : `${career.spikeEfficiency.toFixed(1)}%`,
+      note: "attack",
+    },
+    {
+      label: "Blocks / match",
+      value: perMatch(profile.career, "blockPoint", 2),
+    },
+    {
+      label: "Points / match",
+      value: perMatch(profile.career, "pointTotal"),
+      note: "scored themselves",
+    },
+    {
+      label: "Off opponent errors",
+      value:
+        summary.matches > 0 ? (summary.opponentErrors / summary.matches).toFixed(1) : "—",
+      note:
+        summary.teamPoints > 0
+          ? `${((summary.opponentErrors / summary.teamPoints) * 100).toFixed(0)}% of team points`
+          : undefined,
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div>
@@ -84,52 +125,38 @@ export function PlayerProfileView({
         </Link>
       </div>
 
-      <div className="bg-white p-3 sm:p-4 rounded-lg border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <CountryFlag code={profile.federationCode} className="text-xl shrink-0" />
-          <div className="min-w-0">
+      {/* The headline: six figures that answer "who is this player" before any
+          chart has to be read. */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <CountryFlag code={profile.federationCode} className="text-lg shrink-0" />
             <h1 className="text-base sm:text-lg font-black text-slate-900 truncate">
               {profile.name}
             </h1>
-            <p className="text-[11px] text-slate-500">
-              {profile.federationCode} • {profile.gender === "W" ? "Women" : "Men"} •{" "}
-              {profile.career.matches} measured {profile.career.matches === 1 ? "match" : "matches"}
-            </p>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+              {profile.federationCode}
+            </span>
           </div>
-        </div>
-      </div>
-
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
-          <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-            Career, per match
-          </h2>
-          <div className="divide-y divide-slate-100">
-            {careerRow("Points", perMatch(profile.career, "pointTotal"))}
-            {careerRow("Attacks", perMatch(profile.career, "spikeTotal"))}
-            {careerRow("Block points", perMatch(profile.career, "blockPoint"))}
-            {careerRow("Aces", perMatch(profile.career, "servePoint"))}
-            {careerRow("Digs", perMatch(profile.career, "digTotal"))}
-          </div>
+          <span className="text-[11px] text-slate-400">
+            {profile.gender === "W" ? "Women" : "Men"}
+            {seasons.length > 0 && ` • seasons ${seasons[0]}–${seasons[seasons.length - 1]}`}
+          </span>
         </div>
 
-        <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
-          <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-            Career rates
-          </h2>
-          <div className="divide-y divide-slate-100">
-            {METRICS.filter((m) => m.key !== "pointsPerMatch" && m.key !== "blockPointsPerMatch").map(
-              (metric) => {
-                const value = career[metric.key];
-                return (
-                  <div key={metric.key}>
-                    {careerRow(metric.label, value === null ? "—" : metric.format(value))}
-                  </div>
-                );
-              }
-            )}
-          </div>
-        </div>
+        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y lg:divide-y-0 divide-slate-200">
+          {kpis.map((kpi) => (
+            <div key={kpi.label} className="px-3 sm:px-4 py-2.5">
+              <dt className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                {kpi.label}
+              </dt>
+              <dd className="mt-0.5 font-mono text-xl sm:text-2xl font-black text-slate-900 tabular-nums leading-none">
+                {kpi.value}
+              </dd>
+              {kpi.note && <div className="mt-1 text-[10px] text-slate-400">{kpi.note}</div>}
+            </div>
+          ))}
+        </dl>
       </div>
 
       {/* The same decomposition as the match view, over a whole career. */}
@@ -178,6 +205,19 @@ export function PlayerProfileView({
         </section>
       )}
 
+      {/* The trend, ahead of the season table that states it row by row. */}
+      <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+        <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
+          <h2 className="text-xs font-bold text-slate-900">Form, tournament by tournament</h2>
+          <span className="text-[11px] text-slate-500">
+            each point is one event, in date order
+          </span>
+        </header>
+        <div className="p-3">
+          <FormChart tournaments={profile.tournaments} />
+        </div>
+      </section>
+
       {/* Season by season, with each metric's standing among that season's field. */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-x-auto">
         <table className="w-full text-xs border-collapse min-w-[560px]">
@@ -203,7 +243,7 @@ export function PlayerProfileView({
                   </td>
                   {METRICS.map((metric) => {
                     const value = values[metric.key];
-                    const percentile = row.percentiles[metric.key];
+                    const rank = row.ranks[metric.key];
                     return (
                       <td
                         key={metric.key}
@@ -212,15 +252,15 @@ export function PlayerProfileView({
                         <span className="font-bold text-slate-800">
                           {value === null ? "—" : metric.format(value)}
                         </span>
-                        {percentile !== undefined && percentile !== null && (
+                        {rank && (
                           <span
-                            className={`ml-1 text-[10px] font-normal ${percentileClass(
-                              percentile,
-                              metric.higherIsBetter
+                            className={`ml-1 text-[10px] font-normal ${rankClass(
+                              rank.place,
+                              rank.outOf
                             )}`}
-                            title={`Better than ${percentile.toFixed(0)}% of the field that season`}
+                            title={`${ordinal(rank.place)} of ${rank.outOf} ranked players that season`}
                           >
-                            p{percentile.toFixed(0)}
+                            #{rank.place}
                           </span>
                         )}
                       </td>
@@ -234,24 +274,11 @@ export function PlayerProfileView({
       </div>
 
       <p className="text-[10px] text-slate-400 leading-relaxed">
-        p-values rank the player against everyone of the same gender with at least eight
-        measured matches that season, counted upwards -- so a high number means more of
-        that statistic, which for reception errors is worse, not better. Seasons with
-        fewer than eight matches are shown without a rank.
+        The number beside each figure is the player&#39;s place that season among everyone of
+        the same gender with at least eight measured matches -- 1st is best, which for
+        reception errors means the fewest. Seasons with fewer than eight matches are shown
+        without a placing.
       </p>
-
-      {/* The trend the tournament table below states row by row. */}
-      <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-        <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
-          <h2 className="text-xs font-bold text-slate-900">Form, tournament by tournament</h2>
-          <span className="text-[11px] text-slate-500">
-            each point is one event, in date order
-          </span>
-        </header>
-        <div className="p-3">
-          <FormChart tournaments={profile.tournaments} />
-        </div>
-      </section>
 
       <ArchiveScopeNote seasons={seasons} />
     </div>

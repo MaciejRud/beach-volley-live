@@ -94,6 +94,26 @@ const METRICS: Metric[] = [
  */
 const MIN_ATTACKS = 20;
 
+/**
+ * Turns the set scores into the match score: "21:19, 17:21, 15:11" -> "2:1".
+ *
+ * Derived rather than stored -- the set scores are already there, and the sets
+ * a pair won is just how many of them they took.
+ */
+function matchScore(setScores: string): string {
+  let won = 0;
+  let lost = 0;
+
+  for (const set of setScores.split(",")) {
+    const [ours, theirs] = set.trim().split(":").map(Number);
+    if (!Number.isFinite(ours) || !Number.isFinite(theirs)) continue;
+    if (ours > theirs) won++;
+    else if (theirs > ours) lost++;
+  }
+
+  return `${won}:${lost}`;
+}
+
 /** Tier colours, matching the app's palette rather than FIVB's branding. */
 function tierColour(type: string): string {
   if (type === "51") return "#334155"; // Elite16 -- slate-700
@@ -376,8 +396,8 @@ export function FormChart({ tournaments }: { tournaments: TournamentRow[] }) {
                                 {m.won ? "W" : "L"}
                               </span>
                               <span className="truncate text-slate-700">{m.opponent}</span>
-                              <span className="font-mono text-[9px] text-slate-400">
-                                {m.score}
+                              <span className="font-mono text-[10px] text-slate-500 tabular-nums">
+                                {matchScore(m.score)}
                               </span>
                               <span className="text-right font-mono text-[10px] font-semibold text-slate-800 tabular-nums">
                                 {value === null

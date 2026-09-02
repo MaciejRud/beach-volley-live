@@ -72,6 +72,18 @@ export interface PlayerFormEntry {
   coverage: number;
   /** Totals, positional -- see AGGREGATE_COLUMNS. */
   totals: number[];
+  /** Matches won at this tournament. */
+  won: number;
+  /**
+   * Points the player's side scored across their matches, from the set scores.
+   *
+   * With the pair's own points this gives the points handed over by opponent
+   * errors -- a figure the feed never publishes, and which cannot be recovered
+   * from the opponent's fault counters without double-counting blocked attacks.
+   */
+  teamPoints: number;
+  /** Points the pair scored themselves: this player plus their partner. */
+  pairPoints: number;
   /** The matches behind those totals, oldest first. */
   matches: PlayerFormMatch[];
 }
