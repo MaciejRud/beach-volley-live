@@ -8,7 +8,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
-    "test:fivb": "tsx src/lib/fivb/test-client.ts"
+    "test:fivb": "tsx src/lib/fivb/test-client.ts",
+    "test:stats": "tsx src/lib/fivb/test-stats.ts"
   },
   "dependencies": {
     "@serwist/next": "^9.5.12",

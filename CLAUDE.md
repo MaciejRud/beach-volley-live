@@ -164,7 +164,9 @@ Data model:         https://www.fivb.org/VisSDK/Fivb.Vis.Model/#Fivb.Vis.Model.h
 | Polish teams (`/api/polish-teams`) | 60 s | 45 s |
 | Tournament list (`/api/tournaments`) | 3600 s | 1800 s |
 | Tournament matches (`/api/tournaments/[id]`) | 25 s | 25 s |
-| Tournament entry list (seeding) | 3600 s | via the route above |
+| Tournament entry list (seeding + rosters) | 3600 s | via the route above |
+| Match detail (`/api/matches/[id]`) | 25 s | 25 s live / 1800 s finished |
+| Match statistics | 25 s live / 3600 s finished | via the route above |
 
 When changing one column, change the other. The CDN value should sit at or below
 the in-memory TTL.

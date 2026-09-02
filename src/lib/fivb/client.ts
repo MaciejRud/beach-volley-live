@@ -1,6 +1,7 @@
 ﻿import { RequestBuilder } from "./requestBuilder";
 import { ResponseParser } from "./responseParser";
-import { Tournament, Match, TeamSeed, PolishTeamsSummary, LiveCenterData } from "./types";
+import { Tournament, Match, TeamSeed, TeamEntry, MatchStatistics, PolishTeamsSummary, LiveCenterData } from "./types";
+import { isMeasured } from "./statistics";
 import { globalCache } from "../cache";
 
 export class FivbClient {
@@ -77,23 +78,102 @@ export class FivbClient {
   }
 
   /**
-   * Gets seeding for every team entered in a tournament, keyed by team id.
+   * Gets the entry list of a tournament -- seeding plus both player ids per
+   * team -- keyed by team id.
    *
    * Cached for an hour: entry lists only change when the draw is redone.
    */
-  static async getTeamSeeds(tournamentNo: string | number): Promise<Map<string, TeamSeed>> {
-    const cacheKey = `fivb_seeds_${tournamentNo}`;
+  static async getTeamEntries(tournamentNo: string | number): Promise<Map<string, TeamEntry>> {
+    const cacheKey = `fivb_entries_${tournamentNo}`;
     return globalCache.getOrSet(
       cacheKey,
       async () => {
         const xmlReq = RequestBuilder.getTeamList(tournamentNo);
         const xmlRes = await this.request(xmlReq);
-        if (!xmlRes) return new Map<string, TeamSeed>();
+        if (!xmlRes) return new Map<string, TeamEntry>();
 
-        return ResponseParser.parseTeamSeeds(xmlRes);
+        return ResponseParser.parseTeamEntries(xmlRes);
       },
       3600 // 1 hour TTL
     );
+  }
+
+  /**
+   * Gets seeding for every team entered in a tournament, keyed by team id.
+   *
+   * Reads the cached entry list rather than issuing its own request.
+   */
+  static async getTeamSeeds(tournamentNo: string | number): Promise<Map<string, TeamSeed>> {
+    const entries = await this.getTeamEntries(tournamentNo);
+    const seeds = new Map<string, TeamSeed>();
+    for (const entry of entries.values()) {
+      seeds.set(entry.teamNo, { teamNo: entry.teamNo, seed: entry.seed });
+    }
+    return seeds;
+  }
+
+  /**
+   * Gets a single match record.
+   *
+   * Kept on the live TTL: the caller needs the status to decide how long the
+   * match's statistics may be cached.
+   */
+  static async getMatch(matchNo: string | number): Promise<Match | null> {
+    const cacheKey = `fivb_match_${matchNo}`;
+    const cached = await globalCache.getOrSet<{ match: Match | null }>(
+      cacheKey,
+      async () => {
+        const xmlReq = RequestBuilder.getMatch(matchNo);
+        const xmlRes = await this.request(xmlReq);
+        if (!xmlRes) return { match: null };
+
+        const matches = ResponseParser.parseMatches(xmlRes);
+        return { match: matches[0] ?? null };
+      },
+      25 // 25 seconds TTL for live responsiveness
+    );
+
+    return cached.match;
+  }
+
+  /**
+   * Gets one match's statistics, per set and summed over the match.
+   *
+   * Returns null when the match was not measured -- roughly one match in
+   * fourteen. FIVB answers for those with a valid response full of zeros, so
+   * the distinction has to be made here; passing the zeros on would show
+   * "0 blocks" where the truth is "not recorded".
+   *
+   * A finished match's numbers never change, hence the two TTLs.
+   */
+  static async getMatchStatistics(
+    matchNo: string | number,
+    isFinished: boolean
+  ): Promise<MatchStatistics | null> {
+    const cacheKey = `fivb_match_stats_${matchNo}`;
+    const cached = await globalCache.getOrSet<{ stats: MatchStatistics | null }>(
+      cacheKey,
+      async () => {
+        const xmlReq = RequestBuilder.getMatchStatistics(matchNo);
+        const xmlRes = await this.request(xmlReq);
+        if (!xmlRes) return { stats: null };
+
+        const rows = ResponseParser.parseStatistics(xmlRes);
+        if (!isMeasured(rows)) return { stats: null };
+
+        const matchRows = rows.filter((r) => r.setNumber === undefined);
+        const setRows = rows
+          .filter((r) => r.setNumber !== undefined)
+          .sort((a, b) => (a.setNumber ?? 0) - (b.setNumber ?? 0));
+
+        return {
+          stats: { matchNo: String(matchNo), match: matchRows, sets: setRows },
+        };
+      },
+      isFinished ? 3600 : 25
+    );
+
+    return cached.stats;
   }
 
   /**

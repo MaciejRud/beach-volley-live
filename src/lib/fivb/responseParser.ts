@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { Tournament, Match, Team, TeamSeed, SetScore, TournamentTier, TournamentCircuit, TournamentStatus, MatchStatus } from "./types";
+import { Tournament, Match, Team, TeamEntry, PlayerRef, PlayerStatLine, SetScore, TournamentTier, TournamentCircuit, TournamentStatus, MatchStatus } from "./types";
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -214,13 +214,15 @@ export class ResponseParser {
   }
 
   /**
-   * Parses a tournament entry list into seeding, keyed by team id.
+   * Parses a tournament entry list, keyed by team id.
    *
    * The match list does not expose seeds (TeamASeed comes back empty), so draw
-   * positions are read here and joined onto matches via NoTeamA / NoTeamB.
+   * positions are read here and joined onto matches via NoTeamA / NoTeamB. The
+   * same response carries the two player ids, which is what statistics rows are
+   * matched against.
    */
-  static parseTeamSeeds(xml: string): Map<string, TeamSeed> {
-    const seeds = new Map<string, TeamSeed>();
+  static parseTeamEntries(xml: string): Map<string, TeamEntry> {
+    const entries = new Map<string, TeamEntry>();
 
     try {
       const parsed = xmlParser.parse(xml);
@@ -238,13 +240,103 @@ export class ResponseParser {
 
         const seed = mainPos > 0 ? mainPos : qualPos > 0 ? qualPos : undefined;
 
-        seeds.set(teamNo, { teamNo, seed });
+        entries.set(teamNo, {
+          teamNo,
+          name: String(item["@_Name"] ?? item.Name ?? ""),
+          federationCode: String(item["@_FederationCode"] ?? item.FederationCode ?? "").toUpperCase(),
+          seed,
+          player1: this.parsePlayerRef(item, 1),
+          player2: this.parsePlayerRef(item, 2),
+        });
       }
     } catch (err) {
       console.error("Error parsing team list XML:", err);
     }
 
-    return seeds;
+    return entries;
+  }
+
+  private static parsePlayerRef(item: any, slot: 1 | 2): PlayerRef | undefined {
+    const no = String(item[`@_NoPlayer${slot}`] ?? item[`NoPlayer${slot}`] ?? "");
+    if (!no || no === "0") return undefined;
+
+    const firstName = String(item[`@_Player${slot}FirstName`] ?? item[`Player${slot}FirstName`] ?? "");
+    const lastName = String(item[`@_Player${slot}LastName`] ?? item[`Player${slot}LastName`] ?? "");
+    const name = [lastName, firstName].filter(Boolean).join(" ") || no;
+
+    return { no, firstName, lastName, name };
+  }
+
+  /**
+   * Parses a GetBeachStatisticList response into player rows.
+   *
+   * Only ItemType="30" (players) is kept: team rows (ItemType="11") come back
+   * with every counter zeroed even for fully measured matches, so feeding them
+   * into the "is this match measured?" test would mark everything unmeasured.
+   *
+   * Rows are identified by NoItem. NoPlayer is accepted in the request's Fields
+   * but never sent back.
+   */
+  static parseStatistics(xml: string): PlayerStatLine[] {
+    try {
+      const parsed = xmlParser.parse(xml);
+      const root = parsed.Responses?.VolleyStatistics || parsed.VolleyStatistics || parsed;
+      const rawList = root?.VolleyStatistic || [];
+      const list = Array.isArray(rawList) ? rawList : [rawList];
+
+      return list
+        .filter((item: any) => item && String(item["@_ItemType"] ?? item.ItemType ?? "") === "30")
+        .map((item: any) => {
+          const num = (field: string): number => this.statNumber(item, field) ?? 0;
+          const setNumber = this.statNumber(item, "NoSet");
+
+          return {
+            playerNo: String(item["@_NoItem"] ?? item.NoItem ?? ""),
+            // Match rows send NoSet as an empty attribute, per-set rows as 1..3.
+            setNumber,
+            spikeTotal: num("SpikeTotal"),
+            spikePoint: num("SpikePoint"),
+            spikeFault: num("SpikeFault"),
+            spikeContinue: num("SpikeContinue"),
+            blockTotal: num("BlockTotal"),
+            blockPoint: num("BlockPoint"),
+            blockFault: num("BlockFault"),
+            blockContinue: num("BlockContinue"),
+            serveTotal: num("ServeTotal"),
+            servePoint: num("ServePoint"),
+            serveFault: num("ServeFault"),
+            serveContinue: num("ServeContinue"),
+            receptionTotal: num("ReceptionTotal"),
+            receptionFault: num("ReceptionFault"),
+            receptionContinue: num("ReceptionContinue"),
+            digTotal: num("DigTotal"),
+            digExcellent: num("DigExcellent"),
+            digFault: num("DigFault"),
+            digContinue: num("DigContinue"),
+            setTotal: num("SetTotal"),
+            setFault: num("SetFault"),
+            setContinue: num("SetContinue"),
+            pointTotal: num("PointTotal"),
+            nbRallies: this.statNumber(item, "NbRallies"),
+            nbSets: this.statNumber(item, "NbSets"),
+          };
+        })
+        .filter((row: PlayerStatLine) => row.playerNo !== "");
+    } catch (err) {
+      console.error("Error parsing statistics XML:", err);
+      return [];
+    }
+  }
+
+  /**
+   * Reads one statistic attribute. Empty attributes -- which the feed uses for
+   * "not applicable", e.g. NbSets on a per-set row -- become undefined, never 0.
+   */
+  private static statNumber(item: any, field: string): number | undefined {
+    const raw = item[`@_${field}`] ?? item[field];
+    if (raw === undefined || raw === null || raw === "") return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : undefined;
   }
 
   private static mapTournamentStatus(code: number, startDate?: string, endDate?: string): { status: TournamentStatus; statusText: string } {
