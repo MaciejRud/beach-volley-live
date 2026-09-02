@@ -141,8 +141,12 @@ function rankOf(
 const LOWER_IS_BETTER = new Set<PercentileMetric>(["receptionFaultRate"]);
 
 /**
- * Metric values for every player who reached the match threshold in a season,
- * grouped by gender -- men and women are not a single population.
+ * Metric values for every ranked player in a season, grouped by gender -- men
+ * and women are not a single population.
+ *
+ * The field is the players the section actually lists: someone with two
+ * qualification appearances across their whole career is not a peer to measure
+ * a tour regular against, and counting them only inflates everyone's placing.
  */
 const populationCache = new Map<string, Partial<Record<PercentileMetric, number[]>>>();
 
@@ -150,13 +154,17 @@ async function seasonPopulations(
   season: number,
   gender: Gender
 ): Promise<Partial<Record<PercentileMetric, number[]>>> {
-  // Every player page asks for the same five seasons, and the aggregate file
-  // does not change while the process runs -- so scan it once per season.
+  // Every player page asks for the same five seasons, and the files do not
+  // change while the process runs -- so scan them once per season.
   const cacheKey = `${season}:${gender}`;
   const cached = populationCache.get(cacheKey);
   if (cached) return cached;
 
-  const [aggregates, directory] = await Promise.all([loadAggregates(), loadDirectory()]);
+  const [aggregates, directory, form] = await Promise.all([
+    loadAggregates(),
+    loadDirectory(),
+    loadForm(),
+  ]);
   if (!aggregates) return {};
 
   const populations: Partial<Record<PercentileMetric, number[]>> = {};
@@ -164,6 +172,7 @@ async function seasonPopulations(
 
   for (const [playerNo, entry] of Object.entries(aggregates.players)) {
     if ((directory?.[playerNo]?.gender ?? entry.gender) !== gender) continue;
+    if (form && !form.players[playerNo]) continue;
 
     const values = entry.seasons[String(season)];
     if (!values) continue;
