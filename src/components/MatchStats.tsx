@@ -91,7 +91,7 @@ function startsGroup(index: number): boolean {
 }
 
 /** The heavier rule that separates skill groups from each other. */
-const GROUP_RULE = "border-t-2 border-slate-300";
+const GROUP_RULE = "border-t-4 border-slate-400";
 
 function formatValue(row: StatRow, line: PlayerStatLine | undefined): string {
   if (!line) return "—";
@@ -135,12 +135,17 @@ function seasonComparison(
   };
 }
 
-/** Only efficiency can legitimately go below zero; it is worth seeing at a glance. */
+/**
+ * Match figures are plain black; the only colour among them is a negative
+ * efficiency, which is worth catching at a glance. Everything else that is
+ * coloured in this table is the season average beside the figure, not the
+ * figure itself.
+ */
 function valueClass(row: StatRow, line: PlayerStatLine | undefined): string {
-  if (!row.signed || !line) return "text-slate-800";
+  if (!row.signed || !line) return "text-slate-900";
   const v = row.value(line);
   if (v === null) return "text-slate-400";
-  return v < 0 ? "text-red-600 font-bold" : "text-slate-800";
+  return v < 0 ? "text-red-600" : "text-slate-900";
 }
 
 export function MatchStats({ match, roster, stats, seasonAverages = {}, season }: Props) {
@@ -260,7 +265,7 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     ...setNumbers.map((n) => (
                       <td
                         key={`${slot.player.no}-s${n}-${row.label}`}
-                        className={`py-1 px-2 text-right font-mono tabular-nums text-slate-400 ${
+                        className={`py-1 px-2 text-right font-mono tabular-nums text-slate-900 ${
                           n === setNumbers[0] ? "border-l border-slate-200" : ""
                         }`}
                       >
@@ -335,7 +340,7 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     {setNumbers.map((n) => (
                       <td
                         key={n}
-                        className="py-1 px-1.5 text-right font-mono tabular-nums text-slate-400"
+                        className="py-1 px-1.5 text-right font-mono tabular-nums text-slate-900"
                       >
                         {formatValue(row, setLine(slot.player.no, n))}
                       </td>
