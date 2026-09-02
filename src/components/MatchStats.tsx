@@ -2,7 +2,6 @@
 
 import { Match, PlayerRef, PlayerStatLine, MatchStatistics, TeamEntry } from "@/lib/fivb/types";
 import {
-  MIN_ATTEMPTS_FOR_PERCENT,
   spikeSuccess,
   spikeEfficiency,
   blockSuccess,
@@ -39,8 +38,8 @@ interface Slot {
 /**
  * One line of the statistics table: a label plus how to read it off a stat row.
  *
- * `percent` rows return null below the sample threshold, which is rendered as
- * a dash -- a percentage off six attempts describes the sample, not the player.
+ * `percent` rows return null when the action never happened -- no attacks means
+ * no kill percentage -- which is rendered as a dash.
  */
 interface StatRow {
   label: string;
@@ -398,10 +397,9 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
             average, <span className="text-red-500">red</span> below -- inverted for errors.{" "}
           </>
         )}
-        Kill % counts points only; efficiency subtracts errors and can be negative.
-        Percentages are hidden below {MIN_ATTEMPTS_FOR_PERCENT} attempts, where they would
-        say more about the sample than about the player. Reception has no positive grade in the FIVB feed,
-        so only errors are reported.
+        Kill % counts points only; efficiency subtracts errors and can be negative. A dash
+        means the action never happened, so there is nothing to take a percentage of.
+        Reception has no positive grade in the FIVB feed, so only errors are reported.
       </p>
       {/* Where each team's points came from, set by set. The opponent-errors
           share is not published by the feed -- it is what is left of the score
