@@ -290,8 +290,11 @@ export class ResponseParser {
           const num = (field: string): number => this.statNumber(item, field) ?? 0;
           const setNumber = this.statNumber(item, "NoSet");
 
+          const matchNo = String(item["@_NoMatch"] ?? item.NoMatch ?? "");
+
           return {
             playerNo: String(item["@_NoItem"] ?? item.NoItem ?? ""),
+            matchNo: matchNo || undefined,
             // Match rows send NoSet as an empty attribute, per-set rows as 1..3.
             setNumber,
             spikeTotal: num("SpikeTotal"),

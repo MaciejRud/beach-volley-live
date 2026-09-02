@@ -99,14 +99,30 @@ beach-volley-live/
 │   └── lib/
 │       ├── cache.ts                    # In-memory TTL cache (globalCache)
 │       ├── countryHelper.ts            # Country codes, flags, names
-│       └── fivb/
-│           ├── client.ts               # FivbClient - all API calls + caching
-│           ├── requestBuilder.ts       # Builds VIS XML requests
-│           ├── responseParser.ts       # Parses VIS XML responses
-│           ├── types.ts                # Tournament, Match, LiveCenterData, ...
-│           └── test-client.ts          # Manual API smoke test (npm run test:fivb)
+│       ├── fivb/
+│       │   ├── client.ts               # FivbClient - all API calls + caching
+│       │   ├── requestBuilder.ts       # Builds VIS XML requests
+│       │   ├── responseParser.ts       # Parses VIS XML responses
+│       │   ├── statistics.ts           # Metric formulas, isMeasured()
+│       │   ├── types.ts                # Tournament, Match, LiveCenterData, ...
+│       │   ├── test-client.ts          # Manual API smoke test (npm run test:fivb)
+│       │   └── test-stats.ts           # Statistics smoke test (npm run test:stats)
+│       └── stats/
+│           ├── archive.ts              # data/stats/ file format + readers
+│           ├── aggregate.ts            # Per-player season/career totals
+│           ├── aggregateFile.ts        # data/aggregates.json format
+│           └── seasonAverages.ts       # Runtime lookup of season averages
+├── scripts/
+│   ├── backfill-stats.ts               # Downloads the archive (npm run stats:backfill)
+│   └── build-aggregates.ts             # Reduces it (npm run stats:aggregate)
+├── data/                               # Committed statistics archive, ~4 MB
+│   ├── stats/{tournamentNo}.json       # One file per tournament, frozen once written
+│   ├── players.json                    # Player number -> name, federation, gender
+│   └── aggregates.json                 # Per-player season totals, read at runtime
+├── .github/workflows/update-stats.yml  # Weekly archive refresh
 ├── public/                             # Static assets, PWA manifest
 ├── docs/FIVB-API-Documentation.md      # LOCAL API reference - read this first
+├── docs/PLAN-STATYSTYKI.md             # Statistics rollout plan + API findings
 └── next.config.mjs
 ```
 
@@ -117,7 +133,14 @@ npm run dev          # Dev server on :3000 (webpack, see note below)
 npm run build        # Production build - THE verification gate
 npm run start        # Serve production build
 npm run test:fivb    # Smoke-test the live FIVB API connection
+npm run test:stats   # Smoke-test the statistics layer against live data
+
+npm run stats:backfill   # Fetch new tournaments into data/stats/ (idempotent)
+npm run stats:aggregate  # Rebuild data/aggregates.json from the archive
 ```
+
+Run `stats:aggregate` after every `stats:backfill` -- the aggregate file is what
+the app reads at runtime, and a stale one silently shows outdated averages.
 
 If `npm run build` fails with `MODULE_NOT_FOUND ./NNN.js` or `PageNotFoundError`,
 delete `.next/` and rebuild - that is a stale dev artifact, not a code error.
@@ -155,6 +178,32 @@ Data model:         https://www.fivb.org/VisSDK/Fivb.Vis.Model/#Fivb.Vis.Model.h
 7. Components in `src/components/` stay presentational - fetching and data
    shaping belong in `src/lib/` or the page/route.
 8. Types live in `src/lib/fivb/types.ts` - do not redeclare API shapes locally.
+
+## Statistics Archive
+
+Player statistics come from `GetBeachStatisticList`, undocumented in the public
+`RequestList` but open. Full findings and the rollout plan: `docs/PLAN-STATYSTYKI.md`.
+
+Three rules that are easy to get wrong:
+
+1. **Zero is not missing data.** For a match played without a statistician FIVB
+   returns a valid response with every counter zeroed. `isMeasured()` in
+   `src/lib/fivb/statistics.ts` is the only place that distinction is made -- an
+   unmeasured match must reach the UI as `null`, never as a row of zeros, and
+   must never enter an average.
+2. **Players are keyed by `NoItem`, not `NoPlayer`.** `NoPlayer` is accepted in
+   `Fields` and silently never returned. Rows with `ItemType="30"` are players,
+   `"11"` are teams and always come back zeroed.
+3. **The archive is append-only.** `data/stats/*.json` is written once and never
+   refreshed: coverage gaps are structural (qualification rounds, side courts),
+   not a matter of waiting. Column order in `STAT_COLUMNS` and
+   `AGGREGATE_COLUMNS` is likewise append-only -- reordering reinterprets every
+   number already stored.
+
+Coverage: Elite16, Challenge, Pro Tour Finals, World Championships and Olympics,
+both genders, 2022 onwards. **Futures have no statistics** -- 302 tournaments
+scanned, one measured match in total. Any UI showing career figures has to say so,
+or the first visitor looking up a Futures player will think the app is broken.
 
 ## Cache Strategy (keep the two layers consistent)
 

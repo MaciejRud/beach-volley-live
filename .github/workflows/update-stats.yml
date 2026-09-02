@@ -1,0 +1,42 @@
+name: Update statistics archive
+
+# Statistics for a finished tournament never change -- FIVB does not backfill
+# matches played without a statistician -- so this only ever adds tournaments
+# that finished since the last run.
+on:
+  schedule:
+    - cron: "0 4 * * 1" # Mondays, 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # A failed request aborts the script with a non-zero exit code, so a
+      # network problem fails the job instead of committing empty statistics.
+      - name: Fetch new tournaments
+        run: npx tsx scripts/backfill-stats.ts
+
+      - name: Commit if anything changed
+        run: |
+          if git diff --quiet -- data; then
+            echo "No new tournaments."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git commit -m "chore: update statistics archive"
+          git push

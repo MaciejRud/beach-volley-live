@@ -7,11 +7,14 @@ import { Match, MatchStatistics, TeamEntry } from "@/lib/fivb/types";
 import { CountryFlag } from "@/components/CountryFlag";
 import { MatchTime } from "@/components/MatchTime";
 import { MatchStats } from "@/components/MatchStats";
+import { StatTotals } from "@/lib/stats/aggregate";
 
 interface MatchResponse {
   match: Match;
   roster: { teamA: TeamEntry | null; teamB: TeamEntry | null };
   stats: MatchStatistics | null;
+  seasonAverages: Record<string, StatTotals>;
+  season: number;
   hasStatistics: boolean;
 }
 
@@ -151,7 +154,13 @@ export default function MatchDetailPage({
           </div>
 
           {data?.stats ? (
-            <MatchStats match={match} roster={data.roster} stats={data.stats} />
+            <MatchStats
+              match={match}
+              roster={data.roster}
+              stats={data.stats}
+              seasonAverages={data.seasonAverages}
+              season={data.season}
+            />
           ) : (
             // Roughly one match in fourteen is played without a statistician;
             // FIVB reports those as zeros, which would read as a shut-out.

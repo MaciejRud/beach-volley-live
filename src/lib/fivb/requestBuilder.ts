@@ -63,7 +63,7 @@
    * in about 100 KB -- so there is no reason to walk the matches one by one.
    */
   static getTournamentStatistics(tournamentNo: string | number): string {
-    return `<Request Type="GetBeachStatisticList" SumBy="Match" Fields="${this.STATISTIC_FIELDS} NoMatch NoTournament">
+    return `<Request Type="GetBeachStatisticList" SumBy="Match" Fields="${this.STATISTIC_FIELDS}">
       <Filter NoTournaments="${this.numeric(tournamentNo)}" />
     </Request>`.trim();
   }
@@ -73,7 +73,7 @@
    * player number -- NoPlayer is accepted in Fields but silently never sent.
    */
   private static readonly STATISTIC_FIELDS =
-    "No NoItem ItemType NoSet SpikeTotal SpikePoint SpikeFault SpikeContinue " +
+    "No NoItem ItemType NoMatch NoSet SpikeTotal SpikePoint SpikeFault SpikeContinue " +
     "BlockTotal BlockPoint BlockFault BlockContinue ServeTotal ServePoint ServeFault ServeContinue " +
     "ReceptionTotal ReceptionFault ReceptionContinue DigTotal DigExcellent DigFault DigContinue " +
     "SetTotal SetFault SetContinue PointTotal NbRallies NbSets";

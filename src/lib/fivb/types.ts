@@ -92,6 +92,8 @@ export interface TeamEntry {
 export interface PlayerStatLine {
   /** FIVB player number, read from NoItem on rows with ItemType="30". */
   playerNo: string;
+  /** Match this row belongs to; set when a whole tournament is fetched at once. */
+  matchNo?: string;
   /** Set number on a per-set row; undefined on the match total row. */
   setNumber?: number;
   spikeTotal: number;

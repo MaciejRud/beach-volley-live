@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { FivbClient } from "@/lib/fivb/client";
+import { seasonAveragesFor } from "@/lib/stats/seasonAverages";
 
 export const dynamic = "force-dynamic";
 
@@ -41,10 +42,21 @@ export async function GET(
       teamB: match.teamB.teamNo ? entries.get(match.teamB.teamNo) ?? null : null,
     };
 
+    // Season context for the four players, so a match number can be read
+    // against what they usually do. Empty when the archive has nothing on them
+    // -- a qualifier, or a season not yet backfilled.
+    const playerNos = [roster.teamA, roster.teamB]
+      .flatMap((entry) => [entry?.player1?.no, entry?.player2?.no])
+      .filter((no): no is string => Boolean(no));
+
+    const season = Number((match.date || "").slice(0, 4)) || new Date().getFullYear();
+    const seasonAverages =
+      playerNos.length > 0 ? await seasonAveragesFor(playerNos, season) : {};
+
     // Statistics are null for unmeasured matches -- about one in fourteen. The
     // flag spares every caller from re-deriving the reason from an absent body.
     return NextResponse.json(
-      { match, roster, stats, hasStatistics: stats !== null },
+      { match, roster, stats, seasonAverages, season, hasStatistics: stats !== null },
       {
         headers: {
           "Cache-Control": isFinished

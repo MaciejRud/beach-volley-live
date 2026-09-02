@@ -9,12 +9,16 @@ import {
   receptionFaultRate,
   teamPointBreakdown,
 } from "@/lib/fivb/statistics";
+import { StatTotals } from "@/lib/stats/aggregate";
 import { CountryFlag } from "./CountryFlag";
 
 interface Props {
   match: Match;
   roster: { teamA: TeamEntry | null; teamB: TeamEntry | null };
   stats: MatchStatistics;
+  /** Season totals per player number, from the archive. Absent players are simply missing. */
+  seasonAverages?: Record<string, StatTotals>;
+  season?: number;
 }
 
 /** A player together with the side they played on. */
@@ -67,6 +71,22 @@ function formatValue(row: StatRow, line: PlayerStatLine | undefined): string {
   return row.percent ? `${v.toFixed(1)}%` : String(v);
 }
 
+/**
+ * The player's season figure for the same statistic, shown under the match one.
+ *
+ * Season totals are summed over many matches, so counts have to be divided back
+ * down to a per-match figure to be comparable; percentages are already ratios
+ * and are computed over the season's own totals.
+ */
+function formatSeasonValue(row: StatRow, totals: StatTotals | undefined): string | null {
+  if (!totals || totals.matches === 0) return null;
+
+  const v = row.value(totals as unknown as PlayerStatLine);
+  if (v === null) return null;
+  if (row.percent) return `${v.toFixed(1)}%`;
+  return (v / totals.matches).toFixed(1);
+}
+
 /** Only efficiency can legitimately go below zero; it is worth seeing at a glance. */
 function valueClass(row: StatRow, line: PlayerStatLine | undefined): string {
   if (!row.signed || !line) return "text-slate-800";
@@ -75,7 +95,8 @@ function valueClass(row: StatRow, line: PlayerStatLine | undefined): string {
   return v < 0 ? "text-red-600 font-bold" : "text-slate-800";
 }
 
-export function MatchStats({ match, roster, stats }: Props) {
+export function MatchStats({ match, roster, stats, seasonAverages = {}, season }: Props) {
+  const hasSeasonContext = Object.keys(seasonAverages).length > 0;
   const slots: Slot[] = [
     ...[roster.teamA?.player1, roster.teamA?.player2]
       .filter((p): p is PlayerRef => Boolean(p))
@@ -217,6 +238,14 @@ export function MatchStats({ match, roster, stats }: Props) {
                       )}`}
                     >
                       {formatValue(row, matchLine(slot.player.no))}
+                      {(() => {
+                        const avg = formatSeasonValue(row, seasonAverages[slot.player.no]);
+                        return avg ? (
+                          <span className="ml-1 font-normal text-slate-400" title="Season average">
+                            ({avg})
+                          </span>
+                        ) : null;
+                      })()}
                     </td>,
                   ]
                 )}
@@ -274,6 +303,12 @@ export function MatchStats({ match, roster, stats }: Props) {
                       )}`}
                     >
                       {formatValue(row, matchLine(slot.player.no))}
+                      {(() => {
+                        const avg = formatSeasonValue(row, seasonAverages[slot.player.no]);
+                        return avg ? (
+                          <span className="ml-1 font-normal text-slate-400">({avg})</span>
+                        ) : null;
+                      })()}
                     </td>
                   </tr>
                 ))}
@@ -284,6 +319,13 @@ export function MatchStats({ match, roster, stats }: Props) {
       </div>
 
       <p className="text-[10px] leading-relaxed text-slate-400">
+        {hasSeasonContext && (
+          <>
+            Grey figures in brackets are the player&#39;s {season} average -- per match for
+            counts, over the whole season for percentages, across Elite16, Challenge,
+            Finals, World Championships and Olympic matches only.{" "}
+          </>
+        )}
         Kill % counts points only; efficiency subtracts errors and can be negative.
         Percentages are hidden below 10 attempts, where they would say more about the
         sample than about the player. Reception has no positive grade in the FIVB feed,
