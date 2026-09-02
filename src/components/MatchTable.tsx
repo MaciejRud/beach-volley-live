@@ -2,6 +2,7 @@
 
 import { Fragment, useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Match } from "@/lib/fivb/types";
 import { CountryHelper } from "@/lib/countryHelper";
 import { CountryFlag } from "./CountryFlag";
@@ -19,8 +20,12 @@ interface Props {
 }
 
 export function MatchTable({ matches, title, showTournamentColumn = false, groupByDay = false, hidePhase = false }: Props) {
+  const router = useRouter();
 
   const filtered = matches;
+
+  /** Match detail lives under its tournament, so both ids are needed. */
+  const matchHref = (m: Match) => `/tournaments/${m.tournamentId}/match/${m.no}`;
 
   const formatSetsString = (match: Match) => {
     if (!match.sets || match.sets.length === 0) return "";
@@ -101,7 +106,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
     return (
       <Link
         key={m.id}
-        href={`/tournaments/${m.tournamentId}`}
+        href={matchHref(m)}
         className={`block px-3 py-2.5 transition-colors ${
           hasPolish ? "polish-row" : ""
         } ${isLive ? "bg-red-50/40 hover:bg-red-50" : "hover:bg-slate-50"}`}
@@ -185,14 +190,18 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
     return (
       <tr
         key={m.id}
-        className={`hover:bg-slate-50 transition-colors ${
+        onClick={() => router.push(matchHref(m))}
+        className={`hover:bg-slate-50 transition-colors cursor-pointer ${
           hasPolish ? "polish-row" : ""
         } ${isLive ? "bg-red-50/50" : ""}`}
       >
-        {/* Match number + court */}
+        {/* Match number + court. The number is a real link so the row is
+            reachable by keyboard; clicking anywhere on the row does the same. */}
         <td className="py-1 px-2.5 whitespace-nowrap font-mono text-[10px] text-slate-400">
           <span className="inline-flex items-baseline gap-1">
-            <span className="font-bold">{m.matchNumber ? `M${m.matchNumber}` : "—"}</span>
+            <Link href={matchHref(m)} className="font-bold hover:text-amber-600 transition-colors">
+              {m.matchNumber ? `M${m.matchNumber}` : "—"}
+            </Link>
             {m.court && <span className="text-slate-300">C{m.court}</span>}
           </span>
         </td>
@@ -211,6 +220,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
             {m.tournamentTitle ? (
               <Link
                 href={`/tournaments/${m.tournamentId}`}
+                onClick={(e) => e.stopPropagation()}
                 className="hover:text-amber-600 transition-colors"
               >
                 {m.tournamentTitle}

@@ -34,6 +34,7 @@ export interface SetScore {
   setNumber: number;
   scoreA: number;
   scoreB: number;
+  /** Set length in seconds, as the feed sends it (e.g. 1267 = 21 minutes). */
   duration?: number;
   isFinished?: boolean;
 }
