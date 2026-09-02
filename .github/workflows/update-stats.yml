@@ -29,6 +29,13 @@ jobs:
       - name: Fetch new tournaments
         run: npx tsx scripts/backfill-stats.ts
 
+      # The app reads the derived files, not the archive, so a backfill that
+      # skipped this step would add tournaments nobody ever sees.
+      - name: Rebuild derived files
+        run: |
+          npx tsx scripts/build-aggregates.ts
+          npx tsx scripts/build-player-data.ts
+
       - name: Commit if anything changed
         run: |
           if git diff --quiet -- data; then

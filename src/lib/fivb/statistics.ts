@@ -100,3 +100,55 @@ export function teamPointBreakdown(
     opponentErrors: teamPoints - playerPoints,
   };
 }
+
+/** A team's points split by the action that won them, plus what the opponent gave away. */
+export interface PointOriginSplit {
+  spike: number;
+  block: number;
+  serve: number;
+  opponentErrors: number;
+  total: number;
+}
+
+/**
+ * Splits one team's points for a single set or a whole match.
+ *
+ * `teamPoints` is the scoreboard figure; everything the pair did not win with
+ * an attack, a block or a serve is by definition an opponent error. Summing the
+ * opponent's own fault counters instead would double-count -- a blocked attack
+ * is booked as their error and as our block point at the same time.
+ */
+export function pointOrigin(teamPoints: number, pairLines: PlayerStatLine[]): PointOriginSplit {
+  const spike = pairLines.reduce((total, l) => total + l.spikePoint, 0);
+  const block = pairLines.reduce((total, l) => total + l.blockPoint, 0);
+  const serve = pairLines.reduce((total, l) => total + l.servePoint, 0);
+
+  return {
+    spike,
+    block,
+    serve,
+    opponentErrors: Math.max(0, teamPoints - spike - block - serve),
+    total: teamPoints,
+  };
+}
+
+/** Adds several stat lines together -- both players of a pair, or several sets. */
+export function mergeLines(lines: PlayerStatLine[]): PlayerStatLine | undefined {
+  if (lines.length === 0) return undefined;
+
+  const merged: PlayerStatLine = { ...lines[0] };
+  const keys = [
+    "spikeTotal", "spikePoint", "spikeFault", "spikeContinue",
+    "blockTotal", "blockPoint", "blockFault", "blockContinue",
+    "serveTotal", "servePoint", "serveFault", "serveContinue",
+    "receptionTotal", "receptionFault", "receptionContinue",
+    "digTotal", "digExcellent", "digFault", "digContinue",
+    "setTotal", "setFault", "setContinue", "pointTotal",
+  ] as const;
+
+  for (const line of lines.slice(1)) {
+    for (const key of keys) merged[key] += line[key];
+  }
+
+  return merged;
+}

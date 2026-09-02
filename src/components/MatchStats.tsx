@@ -7,10 +7,17 @@ import {
   blockSuccess,
   serveRisk,
   receptionFaultRate,
-  teamPointBreakdown,
+  pointOrigin,
 } from "@/lib/fivb/statistics";
 import { StatTotals } from "@/lib/stats/aggregate";
 import { CountryFlag } from "./CountryFlag";
+import {
+  BarLegend,
+  ORIGIN_LEGEND,
+  PointOriginBar,
+  RESOLUTION_LEGEND,
+  ResolutionBars,
+} from "./StatBars";
 
 interface Props {
   match: Match;
@@ -42,24 +49,34 @@ interface StatRow {
   detail?: boolean;
   /** Negative values are meaningful here and are coloured accordingly. */
   signed?: boolean;
+  /** Errors: doing more of it than usual is a worse match, not a better one. */
+  lowerIsBetter?: boolean;
 }
 
 const STAT_ROWS: StatRow[] = [
   { label: "Points", value: (l) => l.pointTotal },
   { label: "Attacks", value: (l) => l.spikeTotal },
   { label: "Kills", value: (l) => l.spikePoint, detail: true },
-  { label: "Attack errors", value: (l) => l.spikeFault, detail: true },
+  { label: "Attack errors", value: (l) => l.spikeFault, detail: true, lowerIsBetter: true },
   { label: "Kill %", value: spikeSuccess, percent: true, detail: true },
   { label: "Efficiency", value: spikeEfficiency, percent: true, detail: true, signed: true },
   { label: "Block points", value: (l) => l.blockPoint },
   { label: "Block touches", value: (l) => l.blockTotal, detail: true },
   { label: "Block %", value: blockSuccess, percent: true, detail: true },
   { label: "Aces", value: (l) => l.servePoint },
-  { label: "Serve errors", value: (l) => l.serveFault, detail: true },
+  { label: "Serve errors", value: (l) => l.serveFault, detail: true, lowerIsBetter: true },
+  // Serve risk is deliberately unmarked: aces and errors move together, so
+  // neither more nor less of it is plainly better.
   { label: "Serve risk %", value: serveRisk, percent: true, detail: true },
   { label: "Receptions", value: (l) => l.receptionTotal },
-  { label: "Reception errors", value: (l) => l.receptionFault, detail: true },
-  { label: "Reception error %", value: receptionFaultRate, percent: true, detail: true },
+  { label: "Reception errors", value: (l) => l.receptionFault, detail: true, lowerIsBetter: true },
+  {
+    label: "Reception error %",
+    value: receptionFaultRate,
+    percent: true,
+    detail: true,
+    lowerIsBetter: true,
+  },
   { label: "Digs", value: (l) => l.digTotal },
   { label: "Clean digs", value: (l) => l.digExcellent, detail: true },
 ];
@@ -78,13 +95,32 @@ function formatValue(row: StatRow, line: PlayerStatLine | undefined): string {
  * down to a per-match figure to be comparable; percentages are already ratios
  * and are computed over the season's own totals.
  */
-function formatSeasonValue(row: StatRow, totals: StatTotals | undefined): string | null {
+function seasonComparison(
+  row: StatRow,
+  totals: StatTotals | undefined,
+  line: PlayerStatLine | undefined
+): { text: string; className: string } | null {
   if (!totals || totals.matches === 0) return null;
 
-  const v = row.value(totals as unknown as PlayerStatLine);
-  if (v === null) return null;
-  if (row.percent) return `${v.toFixed(1)}%`;
-  return (v / totals.matches).toFixed(1);
+  const seasonValue = row.value(totals as unknown as PlayerStatLine);
+  if (seasonValue === null) return null;
+
+  const average = row.percent ? seasonValue : seasonValue / totals.matches;
+  const text = row.percent ? `${average.toFixed(1)}%` : average.toFixed(1);
+
+  // Colour says how this match compared to the player's own season: green when
+  // they did more of it than usual, red when less. For error counts "more than
+  // usual" is a worse match, so those rows invert.
+  const matchValue = line ? row.value(line) : null;
+  if (matchValue === null) return { text, className: "text-slate-400" };
+
+  const better = row.lowerIsBetter ? matchValue < average : matchValue > average;
+  const worse = row.lowerIsBetter ? matchValue > average : matchValue < average;
+
+  return {
+    text,
+    className: better ? "text-emerald-600" : worse ? "text-red-500" : "text-slate-400",
+  };
 }
 
 /** Only efficiency can legitimately go below zero; it is worth seeing at a glance. */
@@ -123,47 +159,96 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
   const setLine = (playerNo: string, setNumber: number) =>
     stats.sets.find((l) => l.playerNo === playerNo && l.setNumber === setNumber);
 
-  const breakdowns = (["A", "B"] as const).map((side) => {
+  // Points split per set and for the whole match, per side. The per-set rows
+  // are what make the shape of a match visible: a pair can take one set on
+  // their own attack and the next on the opponent falling apart.
+  const origins = (["A", "B"] as const).map((side) => {
     const entry = side === "A" ? roster.teamA : roster.teamB;
     const playerNos = [entry?.player1?.no, entry?.player2?.no].filter(Boolean) as string[];
-    const lines = stats.match.filter((l) => playerNos.includes(l.playerNo));
-    return {
-      side,
-      team: side === "A" ? match.teamA : match.teamB,
-      breakdown: teamPointBreakdown(match.sets, side, lines),
-    };
+    const ours = (rows: PlayerStatLine[]) => rows.filter((l) => playerNos.includes(l.playerNo));
+    const scoreOf = (set: (typeof match.sets)[number]) => (side === "A" ? set.scoreA : set.scoreB);
+
+    const rows = setNumbers.map((setNumber) => {
+      const set = match.sets.find((s) => s.setNumber === setNumber);
+      return {
+        label: `Set ${setNumber}`,
+        ...pointOrigin(
+          set ? scoreOf(set) : 0,
+          ours(stats.sets.filter((l) => l.setNumber === setNumber))
+        ),
+      };
+    });
+
+    const matchPoints = match.sets.reduce((total, set) => total + scoreOf(set), 0);
+    rows.push({ label: "Whole match", ...pointOrigin(matchPoints, ours(stats.match)) });
+
+    return { side, team: side === "A" ? match.teamA : match.teamB, rows };
   });
 
   return (
     <div className="space-y-4">
-      {/* Where each team's points came from. The opponent-errors share is not
-          published by the feed -- it is what is left after the pair's own points. */}
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        {breakdowns.map(({ side, team, breakdown }) => (
-          <div key={side} className="bg-white p-3 rounded-lg border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-1.5 mb-2">
-              <CountryFlag code={team.countryCode} className="text-sm" />
-              <span className="text-xs font-bold text-slate-900 truncate">{team.name}</span>
-            </div>
-            <div className="flex items-baseline gap-1.5 text-xs text-slate-500">
-              <span className="font-mono text-lg font-black text-slate-900 tabular-nums">
-                {breakdown.teamPoints}
-              </span>
-              <span>points</span>
-              <span className="text-slate-300">=</span>
-              <span className="font-mono font-bold text-slate-700 tabular-nums">
-                {breakdown.playerPoints}
-              </span>
-              <span>scored</span>
-              <span className="text-slate-300">+</span>
-              <span className="font-mono font-bold text-slate-700 tabular-nums">
-                {breakdown.opponentErrors}
-              </span>
-              <span>off errors</span>
-            </div>
+      {/* Where each team's points came from, set by set. The opponent-errors
+          share is not published by the feed -- it is what is left of the score
+          after the pair's own attack, block and serve points. */}
+      <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+        <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
+          <h2 className="text-xs font-bold text-slate-900">Where the points came from</h2>
+          <span className="text-[11px] text-slate-500">
+            attack + block + serve + opponent errors = the set score
+          </span>
+        </header>
+        <div className="p-3">
+          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            {origins.map(({ side, team, rows }) => (
+              <div key={side}>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <CountryFlag code={team.countryCode} className="text-sm" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 truncate">
+                    {team.name}
+                  </span>
+                </div>
+                {rows.map((row) => (
+                  <PointOriginBar key={row.label} origin={row} />
+                ))}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+          <BarLegend items={ORIGIN_LEGEND} />
+          <p className="mt-2.5 text-[10px] leading-relaxed text-slate-400">
+            Points off opponent errors are the remainder: the set score minus what the pair
+            scored themselves. The feed does not publish them, and summing the opponent&#39;s
+            own errors would not work -- a blocked attack is counted there twice.
+          </p>
+        </div>
+      </section>
+
+      {/* Each skill decomposes exactly into won / rally continues / error. */}
+      <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+        <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
+          <h2 className="text-xs font-bold text-slate-900">How the actions ended</h2>
+          <span className="text-[11px] text-slate-500">
+            every skill splits exactly into point / rally continues / error
+          </span>
+        </header>
+        <div className="p-3">
+          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
+            {slots.map((slot) => (
+              <div key={slot.player.no}>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2 truncate">
+                  {slot.player.lastName || slot.player.name}
+                </div>
+                <ResolutionBars line={matchLine(slot.player.no)} />
+              </div>
+            ))}
+          </div>
+          <BarLegend items={RESOLUTION_LEGEND} />
+          <p className="mt-2.5 text-[10px] leading-relaxed text-slate-400">
+            Defence and reception do not score. Green on defence means the ball was dug
+            cleanly, and reception has no positive grade in the FIVB feed at all -- only
+            errors and rallies that carried on.
+          </p>
+        </div>
+      </section>
 
       {/* Desktop: statistics down the side, players across the top, each split
           into their sets plus the match total. */}
@@ -239,10 +324,17 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     >
                       {formatValue(row, matchLine(slot.player.no))}
                       {(() => {
-                        const avg = formatSeasonValue(row, seasonAverages[slot.player.no]);
+                        const avg = seasonComparison(
+                          row,
+                          seasonAverages[slot.player.no],
+                          matchLine(slot.player.no)
+                        );
                         return avg ? (
-                          <span className="ml-1 font-normal text-slate-400" title="Season average">
-                            ({avg})
+                          <span
+                            className={`ml-1 font-normal ${avg.className}`}
+                            title="Season average"
+                          >
+                            ({avg.text})
                           </span>
                         ) : null;
                       })()}
@@ -304,9 +396,13 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
                     >
                       {formatValue(row, matchLine(slot.player.no))}
                       {(() => {
-                        const avg = formatSeasonValue(row, seasonAverages[slot.player.no]);
+                        const avg = seasonComparison(
+                          row,
+                          seasonAverages[slot.player.no],
+                          matchLine(slot.player.no)
+                        );
                         return avg ? (
-                          <span className="ml-1 font-normal text-slate-400">({avg})</span>
+                          <span className={`ml-1 font-normal ${avg.className}`}>({avg.text})</span>
                         ) : null;
                       })()}
                     </td>
@@ -321,9 +417,11 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
       <p className="text-[10px] leading-relaxed text-slate-400">
         {hasSeasonContext && (
           <>
-            Grey figures in brackets are the player&#39;s {season} average -- per match for
-            counts, over the whole season for percentages, across Elite16, Challenge,
-            Finals, World Championships and Olympic matches only.{" "}
+            Figures in brackets are the player&#39;s {season} average -- per match for counts,
+            over the whole season for percentages, across Elite16, Challenge, Finals, World
+            Championships and Olympic matches only.{" "}
+            <span className="text-emerald-600">Green</span> means this match was above that
+            average, <span className="text-red-500">red</span> below -- inverted for errors.{" "}
           </>
         )}
         Kill % counts points only; efficiency subtracts errors and can be negative.

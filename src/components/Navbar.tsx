@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Flag, Activity } from "lucide-react";
+import { Calendar, Flag, Activity, Users } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Tournament Calendar", shortLabel: "Calendar", icon: Calendar, accent: "" },
   { href: "/polish-teams", label: "Poland Zone", shortLabel: "Poland", icon: Flag, accent: "text-red-500" },
   { href: "/live", label: "Live Matches", shortLabel: "Live", icon: Activity, accent: "text-emerald-500" },
+  { href: "/players", label: "Players", shortLabel: "Players", icon: Users, accent: "text-sky-500" },
 ];
 
 export function Navbar() {
@@ -63,8 +64,8 @@ export function Navbar() {
       </header>
 
       {/*
-        Mobile bottom tab bar. Fixed rather than horizontally scrollable: three
-        items always fit, and a scrolling strip would hide destinations and make
+        Mobile bottom tab bar. Fixed rather than horizontally scrollable: four
+        items still fit, and a scrolling strip would hide destinations and make
         targets harder to hit. Bottom inset padding keeps it clear of the iOS
         home indicator.
       */}
@@ -72,7 +73,7 @@ export function Navbar() {
         className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 pb-[env(safe-area-inset-bottom)]"
         aria-label="Main"
       >
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;

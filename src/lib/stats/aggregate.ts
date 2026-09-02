@@ -30,7 +30,7 @@ export interface PlayerAggregate {
   seasons: PlayerSeasonTotals[];
 }
 
-const COUNTER_KEYS = [
+export const COUNTER_KEYS = [
   "spikeTotal",
   "spikePoint",
   "spikeFault",
@@ -58,16 +58,27 @@ const COUNTER_KEYS = [
   "nbSets",
 ] as const;
 
-function emptyTotals(): StatTotals {
+export type CounterKey = (typeof COUNTER_KEYS)[number];
+
+export function emptyTotals(): StatTotals {
   const totals = { matches: 0 } as StatTotals;
   for (const key of COUNTER_KEYS) totals[key] = 0;
   return totals;
 }
 
-function addLine(totals: StatTotals, line: PlayerStatLine): void {
+/** Folds one match line into a running total. */
+export function addLine(totals: StatTotals, line: PlayerStatLine): void {
   totals.matches += 1;
   for (const key of COUNTER_KEYS) {
     totals[key] += line[key] ?? 0;
+  }
+}
+
+/** Folds one set of totals into another -- career from seasons, season from tournaments. */
+export function addTotals(target: StatTotals, source: StatTotals): void {
+  target.matches += source.matches;
+  for (const key of COUNTER_KEYS) {
+    target[key] += source[key] ?? 0;
   }
 }
 
