@@ -3,6 +3,7 @@ import { ResponseParser } from "../src/lib/fivb/responseParser";
 import { isMeasured } from "../src/lib/fivb/statistics";
 import { Gender, PlayerStatLine, Tournament } from "../src/lib/fivb/types";
 import {
+  ArchivedMatchInfo,
   ArchivedTournament,
   FIRST_ARCHIVED_SEASON,
   PlayerDirectory,
@@ -135,7 +136,8 @@ async function fetchTournament(
     RequestBuilder.getMatchList(tournament.no),
     `matches ${tournament.no}`
   );
-  const matchCount = ResponseParser.parseMatches(matchesXml).length;
+  const playedMatches = ResponseParser.parseMatches(matchesXml);
+  const matchCount = playedMatches.length;
 
   // The entry list is the only source of player names and federations; the
   // statistics rows carry nothing but a number.
@@ -143,7 +145,8 @@ async function fetchTournament(
     RequestBuilder.getTeamList(tournament.no),
     `teams ${tournament.no}`
   );
-  for (const entry of ResponseParser.parseTeamEntries(teamsXml).values()) {
+  const entries = ResponseParser.parseTeamEntries(teamsXml);
+  for (const entry of entries.values()) {
     for (const player of [entry.player1, entry.player2]) {
       if (!player) continue;
       players[player.no] = {
@@ -153,6 +156,27 @@ async function fetchTournament(
         gender: tournament.gender,
       };
     }
+  }
+
+  // Opponent and result per measured match. Kept alongside the numbers so a
+  // player's page can label a data point without refetching the tournament.
+  const matchInfo: Record<string, ArchivedMatchInfo> = {};
+  for (const played of playedMatches) {
+    if (!matches[played.no]) continue;
+
+    const playersOf = (teamNo?: string) => {
+      const entry = teamNo ? entries.get(teamNo) : undefined;
+      return [entry?.player1?.no, entry?.player2?.no].filter(Boolean) as string[];
+    };
+
+    matchInfo[played.no] = {
+      a: played.teamA.name,
+      b: played.teamB.name,
+      pa: playersOf(played.teamA.teamNo),
+      pb: playersOf(played.teamB.teamNo),
+      s: played.sets.map((set) => `${set.scoreA}:${set.scoreB}`).join(", "),
+      w: played.winner ?? null,
+    };
   }
 
   return {
@@ -168,6 +192,7 @@ async function fetchTournament(
     measuredMatchCount,
     columns: STAT_COLUMNS,
     matches,
+    matchInfo,
     fetchedAt: new Date().toISOString().slice(0, 10),
   };
 }

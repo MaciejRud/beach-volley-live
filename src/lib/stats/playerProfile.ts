@@ -57,7 +57,18 @@ export interface TournamentRow {
   title: string;
   season: number;
   startDate: string;
+  /** FIVB tournament type, for tier colouring on the form chart. */
+  type: string;
+  /** Percentage of the event's matches that were measured. */
+  coverage: number;
   totals: StatTotals;
+  /** The matches behind the totals, in playing order. */
+  matches: {
+    opponent: string;
+    score: string;
+    won: boolean;
+    totals: StatTotals;
+  }[];
 }
 
 export interface PlayerProfile {
@@ -166,7 +177,15 @@ export async function loadPlayerProfile(playerNo: string): Promise<PlayerProfile
     title: t.title,
     season: t.season,
     startDate: t.startDate,
+    type: t.type ?? "",
+    coverage: t.coverage ?? 100,
     totals: decodeTotalsArray(t.totals, form!.columns),
+    matches: (t.matches ?? []).map((m) => ({
+      opponent: m.o,
+      score: m.s,
+      won: m.w,
+      totals: decodeTotalsArray(m.t, form!.columns),
+    })),
   }));
 
   return {

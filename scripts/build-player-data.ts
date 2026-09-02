@@ -7,6 +7,7 @@ import {
   PLAYER_FORM_FILE,
   PLAYER_INDEX_FILE,
   PlayerFormEntry,
+  PlayerFormMatch,
   PlayerIndexEntry,
 } from "../src/lib/stats/playerFiles";
 
@@ -39,9 +40,16 @@ async function main() {
 
   for (const tournament of ordered) {
     const perPlayer = new Map<string, StatTotals>();
+    const perPlayerMatches = new Map<string, PlayerFormMatch[]>();
 
-    for (const tuples of Object.values(tournament.matches)) {
-      for (const tuple of tuples) {
+    // Matches in playing order, so a tournament's tooltip reads first round
+    // downwards. Match numbers rise through the draw.
+    const matchNumbers = Object.keys(tournament.matches).sort((a, b) => Number(a) - Number(b));
+
+    for (const matchNo of matchNumbers) {
+      const info = tournament.matchInfo?.[matchNo];
+
+      for (const tuple of tournament.matches[matchNo]) {
         const line = decodeStatTuple(tuple, tournament.columns);
         let totals = perPlayer.get(line.playerNo);
         if (!totals) {
@@ -49,8 +57,42 @@ async function main() {
           perPlayer.set(line.playerNo, totals);
         }
         addLine(totals, line);
+
+        if (!info) continue;
+
+        // Which side of the net this player was on decides both the opponent
+        // and how the set scores should be read. Matched on player number, not
+        // name -- the tour has two Mols and two Grimalts.
+        const onA = info.pa.includes(line.playerNo);
+        const onB = info.pb.includes(line.playerNo);
+        if (!onA && !onB) continue;
+
+        const matchTotals = emptyTotals();
+        addLine(matchTotals, line);
+
+        (perPlayerMatches.get(line.playerNo) ??
+          perPlayerMatches.set(line.playerNo, []).get(line.playerNo)!)
+          .push({
+            o: onA ? info.b : info.a,
+            // Scores come team-A first; flipped so the player's own score leads.
+            s: onA
+              ? info.s
+              : info.s
+                  .split(", ")
+                  .map((set) => set.split(":").reverse().join(":"))
+                  .join(", "),
+            w: info.w === (onA ? "A" : "B"),
+            t: encodeTotals(matchTotals),
+          });
       }
     }
+
+    // Coverage separates "this pair played badly" from "we only have half the
+    // draw"; the chart marks the second case rather than hiding it.
+    const coverage =
+      tournament.matchCount > 0
+        ? Math.round((tournament.measuredMatchCount / tournament.matchCount) * 100)
+        : 100;
 
     for (const [playerNo, totals] of perPlayer) {
       (form[playerNo] ??= []).push({
@@ -59,7 +101,10 @@ async function main() {
         title: tournament.title,
         season: tournament.season,
         startDate: tournament.startDate,
+        type: tournament.type,
+        coverage,
         totals: encodeTotals(totals),
+        matches: perPlayerMatches.get(playerNo) ?? [],
       });
 
       careerMatches.set(playerNo, (careerMatches.get(playerNo) ?? 0) + totals.matches);
@@ -84,8 +129,13 @@ async function main() {
         s: latestSeason.get(playerNo) ?? 0,
       };
     })
-    // Most-played first: the default listing should open on names people know.
-    .sort((a, b) => b.m - a.m || a.d.localeCompare(b.d));
+    // Grouped by federation, then alphabetically within it: people look for a
+    // player by their country far more often than by how much they have played.
+    // Players with no federation on record sort last rather than under "".
+    .sort(
+      (a, b) =>
+        (a.f ? 0 : 1) - (b.f ? 0 : 1) || a.f.localeCompare(b.f) || a.d.localeCompare(b.d)
+    );
 
   const seasons = [...new Set(tournaments.map((t) => t.season))].sort((a, b) => a - b);
 

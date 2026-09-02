@@ -187,69 +187,6 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
 
   return (
     <div className="space-y-4">
-      {/* Where each team's points came from, set by set. The opponent-errors
-          share is not published by the feed -- it is what is left of the score
-          after the pair's own attack, block and serve points. */}
-      <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-        <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
-          <h2 className="text-xs font-bold text-slate-900">Where the points came from</h2>
-          <span className="text-[11px] text-slate-500">
-            attack + block + serve + opponent errors = the set score
-          </span>
-        </header>
-        <div className="p-3">
-          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-            {origins.map(({ side, team, rows }) => (
-              <div key={side}>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <CountryFlag code={team.countryCode} className="text-sm" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 truncate">
-                    {team.name}
-                  </span>
-                </div>
-                {rows.map((row) => (
-                  <PointOriginBar key={row.label} origin={row} />
-                ))}
-              </div>
-            ))}
-          </div>
-          <BarLegend items={ORIGIN_LEGEND} />
-          <p className="mt-2.5 text-[10px] leading-relaxed text-slate-400">
-            Points off opponent errors are the remainder: the set score minus what the pair
-            scored themselves. The feed does not publish them, and summing the opponent&#39;s
-            own errors would not work -- a blocked attack is counted there twice.
-          </p>
-        </div>
-      </section>
-
-      {/* Each skill decomposes exactly into won / rally continues / error. */}
-      <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-        <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
-          <h2 className="text-xs font-bold text-slate-900">How the actions ended</h2>
-          <span className="text-[11px] text-slate-500">
-            every skill splits exactly into point / rally continues / error
-          </span>
-        </header>
-        <div className="p-3">
-          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
-            {slots.map((slot) => (
-              <div key={slot.player.no}>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2 truncate">
-                  {slot.player.lastName || slot.player.name}
-                </div>
-                <ResolutionBars line={matchLine(slot.player.no)} />
-              </div>
-            ))}
-          </div>
-          <BarLegend items={RESOLUTION_LEGEND} />
-          <p className="mt-2.5 text-[10px] leading-relaxed text-slate-400">
-            Defence and reception do not score. Green on defence means the ball was dug
-            cleanly, and reception has no positive grade in the FIVB feed at all -- only
-            errors and rallies that carried on.
-          </p>
-        </div>
-      </section>
-
       {/* Desktop: statistics down the side, players across the top, each split
           into their sets plus the match total. */}
       <div className="hidden md:block bg-white rounded-lg border border-slate-200 shadow-xs overflow-x-auto">
@@ -429,6 +366,69 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
         sample than about the player. Reception has no positive grade in the FIVB feed,
         so only errors are reported.
       </p>
+      {/* Where each team's points came from, set by set. The opponent-errors
+          share is not published by the feed -- it is what is left of the score
+          after the pair's own attack, block and serve points. */}
+      <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+        <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
+          <h2 className="text-xs font-bold text-slate-900">Where the points came from</h2>
+          <span className="text-[11px] text-slate-500">
+            attack + block + serve + opponent errors = the set score
+          </span>
+        </header>
+        <div className="p-3">
+          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            {origins.map(({ side, team, rows }) => (
+              <div key={side}>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <CountryFlag code={team.countryCode} className="text-sm" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 truncate">
+                    {team.name}
+                  </span>
+                </div>
+                {rows.map((row) => (
+                  <PointOriginBar key={row.label} origin={row} />
+                ))}
+              </div>
+            ))}
+          </div>
+          <BarLegend items={ORIGIN_LEGEND} />
+          <p className="mt-2.5 text-[10px] leading-relaxed text-slate-400">
+            Points off opponent errors are the remainder: the set score minus what the pair
+            scored themselves. The feed does not publish them, and summing the opponent&#39;s
+            own errors would not work -- a blocked attack is counted there twice.
+          </p>
+        </div>
+      </section>
+
+      {/* Each skill decomposes exactly into won / rally continues / error. */}
+      <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+        <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
+          <h2 className="text-xs font-bold text-slate-900">How the actions ended</h2>
+          <span className="text-[11px] text-slate-500">
+            every skill splits exactly into point / rally continues / error
+          </span>
+        </header>
+        <div className="p-3">
+          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
+            {slots.map((slot) => (
+              <div key={slot.player.no}>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2 truncate">
+                  {slot.player.lastName || slot.player.name}
+                </div>
+                <ResolutionBars line={matchLine(slot.player.no)} />
+              </div>
+            ))}
+          </div>
+          <BarLegend items={RESOLUTION_LEGEND} />
+          <p className="mt-2.5 text-[10px] leading-relaxed text-slate-400">
+            Defence and reception do not score. Green on defence means the ball was dug
+            cleanly, and reception has no positive grade in the FIVB feed at all -- only
+            errors and rallies that carried on.
+          </p>
+        </div>
+      </section>
+
     </div>
   );
 }

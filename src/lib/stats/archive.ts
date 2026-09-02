@@ -59,6 +59,26 @@ export const STAT_COLUMNS = [
 export type StatTuple = [string, ...number[]];
 
 /**
+ * The context of one match: who played whom, and how it ended.
+ *
+ * Statistics rows carry nothing but numbers, so without this a match cannot be
+ * labelled with an opponent or a result. Field names are single letters because
+ * this repeats for every match in the archive.
+ */
+export interface ArchivedMatchInfo {
+  /** Team A name, team B name. */
+  a: string;
+  b: string;
+  /** Player numbers on each side, for deciding which side a player was on. */
+  pa: string[];
+  pb: string[];
+  /** Set scores as played, e.g. "21:19, 18:21, 15:12". */
+  s: string;
+  /** Winning side, or null for a match with no decided winner. */
+  w: "A" | "B" | null;
+}
+
+/**
  * A tournament as stored in the archive.
  *
  * `matches` holds only measured matches: an unmeasured one carries no
@@ -86,6 +106,13 @@ export interface ArchivedTournament {
   columns: readonly string[];
   /** Statistics per match, keyed by match number. */
   matches: Record<string, StatTuple[]>;
+  /**
+   * Opponent and result per match, keyed the same way.
+   *
+   * Optional: files written before this was added simply lack it, and readers
+   * fall back to showing the numbers without match labels.
+   */
+  matchInfo?: Record<string, ArchivedMatchInfo>;
   /** When this file was written, ISO date. */
   fetchedAt: string;
 }

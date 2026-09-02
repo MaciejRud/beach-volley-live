@@ -36,6 +36,23 @@ export interface PlayerIndexFile {
   players: PlayerIndexEntry[];
 }
 
+/**
+ * One match inside a tournament, as the chart tooltip lists it.
+ *
+ * Short keys: this repeats for every match of every player in the archive, and
+ * the file is already the largest thing the server reads.
+ */
+export interface PlayerFormMatch {
+  /** Opponent pair name. */
+  o: string;
+  /** Set scores from this player's point of view, e.g. "21:19, 15:21, 15:11". */
+  s: string;
+  /** Did this player's side win. */
+  w: boolean;
+  /** This player's totals in the match, positional -- see AGGREGATE_COLUMNS. */
+  t: number[];
+}
+
 /** One tournament in a player's career, as stored: totals in AGGREGATE_COLUMNS order. */
 export interface PlayerFormEntry {
   tournamentNo: string;
@@ -43,8 +60,20 @@ export interface PlayerFormEntry {
   title: string;
   season: number;
   startDate: string;
+  /** FIVB tournament type, used to colour the point by tier. */
+  type: string;
+  /**
+   * Share of the tournament's matches that were measured, 0-100.
+   *
+   * A partially recorded event is real data covering part of the draw, so it is
+   * plotted -- but marked, because the average behind the point rests on fewer
+   * matches than the tournament actually had.
+   */
+  coverage: number;
   /** Totals, positional -- see AGGREGATE_COLUMNS. */
   totals: number[];
+  /** The matches behind those totals, oldest first. */
+  matches: PlayerFormMatch[];
 }
 
 export interface PlayerFormFile {
