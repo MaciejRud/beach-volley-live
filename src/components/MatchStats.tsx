@@ -123,8 +123,14 @@ const STAT_ROWS: StatRow[] = [
     definition: "Block points ÷ block touches: how often a touch finished the rally.",
   },
   {
+    label: "Serves",
+    value: (l) => l.serveTotal,
+    definition: "Every serve the player hit.",
+  },
+  {
     label: "Aces",
     value: (l) => l.servePoint,
+    detail: true,
     definition: "Serves that won the point immediately.",
   },
   {
