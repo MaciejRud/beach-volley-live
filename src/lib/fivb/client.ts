@@ -311,7 +311,11 @@ export class FivbClient {
 
     const activeMatches = matches.filter((m) => m.status === "live" || m.status === "break");
     const upcomingMatches = matches.filter((m) => m.status === "scheduled");
-    const recentMatches = matches.filter((m) => m.status === "finished").slice(0, 15);
+    // A bye is sent as a finished match with no opponent and no sets, so it
+    // would otherwise surface here as a 0:0 result.
+    const recentMatches = matches
+      .filter((m) => m.status === "finished" && m.fixtureState === "drawn")
+      .slice(0, 15);
 
     const tournamentIds = new Set(matches.map((m) => m.tournamentId));
     const allTournaments = await this.getTournaments(new Date().getFullYear());

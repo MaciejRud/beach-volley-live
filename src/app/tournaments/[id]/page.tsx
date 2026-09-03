@@ -7,9 +7,6 @@ import { CountryHelper } from "@/lib/countryHelper";
 import { CountryFlag } from "@/components/CountryFlag";
 import { MatchTable } from "@/components/MatchTable";
 import { groupByDraw } from "@/lib/fivb/phases";
-
-/** Tiers whose results are published as qualification + main draw sections. */
-const PHASED_TIERS = new Set(["Elite16", "Challenge", "Futures", "Finals", "WorldChamps"]);
 import { ArrowLeft } from "lucide-react";
 
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -22,13 +19,11 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Beach Pro Tour events all run a pooled main draw plus, for most tiers, a
-  // qualification bracket -- worth splitting out. National and continental
-  // events have no consistent phase data, so they stay on the flat list.
-  const drawGroups = useMemo(
-    () => (PHASED_TIERS.has(tournament?.tier ?? "") ? groupByDraw(matches) : []),
-    [tournament?.tier, matches]
-  );
+  // Every tier ships the draw structure -- Beach Pro Tour, continental
+  // championships and national tours alike -- so the split is gated on the
+  // data rather than on a list of tiers. groupByDraw returns nothing where a
+  // feed omits it, and the flat list below takes over.
+  const drawGroups = useMemo(() => groupByDraw(matches), [matches]);
 
   const fetchDetail = async (silent: boolean = false) => {
     try {
@@ -112,13 +107,23 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
               <h2 className="text-sm font-black text-slate-900 tracking-tight">
                 Results {group.title}
               </h2>
-              {group.phases.map((phase) => (
-                <MatchTable
-                  key={`${group.section}-${phase.name}`}
-                  matches={phase.matches}
-                  title={phase.name}
-                  hidePhase
-                />
+              {group.blocks.map((block) => (
+                <div key={block.kind} className="space-y-2.5">
+                  {group.showBlockTitles && (
+                    <h3 className="pt-1 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                      {block.title}
+                    </h3>
+                  )}
+                  {block.phases.map((phase) => (
+                    <MatchTable
+                      key={`${group.section}-${phase.name}`}
+                      matches={phase.matches}
+                      title={phase.label}
+                      subtitle={phase.stake}
+                      hidePhase
+                    />
+                  ))}
+                </div>
               ))}
             </section>
           ))}

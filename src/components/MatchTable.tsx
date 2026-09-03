@@ -12,6 +12,8 @@ import { formatDateHeading, groupByDate } from "@/lib/dateFormatter";
 interface Props {
   matches: Match[];
   title?: string;
+  /** Secondary line under the title, e.g. what the round settles. */
+  subtitle?: string;
   showTournamentColumn?: boolean;
   /** Splits the list into per-day sections with a date heading. */
   groupByDay?: boolean;
@@ -19,7 +21,7 @@ interface Props {
   hidePhase?: boolean;
 }
 
-export function MatchTable({ matches, title, showTournamentColumn = false, groupByDay = false, hidePhase = false }: Props) {
+export function MatchTable({ matches, title, subtitle, showTournamentColumn = false, groupByDay = false, hidePhase = false }: Props) {
   const router = useRouter();
 
   const filtered = matches;
@@ -47,6 +49,30 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
     );
   };
 
+  /**
+   * The middle column: a set score for a real fixture, and why there is none
+   * otherwise. A bye and an empty bracket slot both arrive as ordinary rows,
+   * and a bye even arrives "finished" -- rendering either as 0 : 0 reads as a
+   * played match that nobody won.
+   */
+  const renderOutcome = (m: Match) => {
+    if (m.fixtureState === "bye") {
+      return (
+        <span className="font-mono font-bold px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-500">
+          BYE
+        </span>
+      );
+    }
+    if (m.fixtureState === "undrawn") {
+      return <span className="font-mono text-xs text-slate-300">vs</span>;
+    }
+    return null;
+  };
+
+  /** The side of a bye that has no opponent; "TBD" would imply one is coming. */
+  const sideName = (team: Match["teamA"], m: Match) =>
+    m.fixtureState === "bye" && team.name === "TBD" ? "—" : team.name;
+
   /** Draw position from the entry list, rendered as results pages do: "[3]". */
   const renderSeed = (team: Match["teamA"]) => {
     if (!team.seed) return null;
@@ -61,9 +87,9 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
    * Mobile layout puts one player per line. Falls back to the combined team
    * name for placeholder entries (TBD) where the API sends no player split.
    */
-  const renderPlayerLines = (team: Match["teamA"]) => {
+  const renderPlayerLines = (team: Match["teamA"], m: Match) => {
     if (!team.player1 && !team.player2) {
-      return <div className="truncate">{team.name}</div>;
+      return <div className="truncate">{sideName(team, m)}</div>;
     }
     return (
       <>
@@ -128,13 +154,17 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
                   m.winner === "A" ? "font-bold text-slate-950" : "font-medium"
                 }`}
               >
-                {renderPlayerLines(m.teamA)}
+                {renderPlayerLines(m.teamA, m)}
               </div>
               <CountryFlag code={m.teamA.countryCode} className="text-sm shrink-0" />
             </div>
 
-            <span className="shrink-0 self-center font-mono font-bold px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-800">
-              {m.setsWonA} : {m.setsWonB}
+            <span className="shrink-0 self-center">
+              {renderOutcome(m) ?? (
+                <span className="font-mono font-bold px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-800">
+                  {m.setsWonA} : {m.setsWonB}
+                </span>
+              )}
             </span>
 
             <div className="min-w-0 flex-1 flex items-center gap-1.5">
@@ -144,7 +174,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
                   m.winner === "B" ? "font-bold text-slate-950" : "font-medium"
                 }`}
               >
-                {renderPlayerLines(m.teamB)}
+                {renderPlayerLines(m.teamB, m)}
               </div>
             </div>
           </div>
@@ -250,7 +280,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
                 m.winner === "A" ? "font-bold text-slate-950" : ""
               }`}
             >
-              {m.teamA.name}
+              {sideName(m.teamA, m)}
             </span>
             {renderSeed(m.teamA)}
             <CountryFlag code={m.teamA.countryCode} className="text-sm" />
@@ -259,15 +289,17 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
 
         {/* Sets won */}
         <td className="py-1 px-2 text-center whitespace-nowrap">
-          <span
-            className={`font-mono font-bold px-1.5 py-0.2 rounded text-xs ${
-              isFinished || isLive
-                ? "bg-slate-100 text-slate-800"
-                : "text-slate-400"
-            }`}
-          >
-            {m.setsWonA} : {m.setsWonB}
-          </span>
+          {renderOutcome(m) ?? (
+            <span
+              className={`font-mono font-bold px-1.5 py-0.2 rounded text-xs ${
+                isFinished || isLive
+                  ? "bg-slate-100 text-slate-800"
+                  : "text-slate-400"
+              }`}
+            >
+              {m.setsWonA} : {m.setsWonB}
+            </span>
+          )}
         </td>
 
         {/* Team 2 */}
@@ -280,7 +312,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
                 m.winner === "B" ? "font-bold text-slate-950" : ""
               }`}
             >
-              {m.teamB.name}
+              {sideName(m.teamB, m)}
             </span>
             {renderSeed(m.teamB)}
           </div>
@@ -309,6 +341,7 @@ export function MatchTable({ matches, title, showTournamentColumn = false, group
       <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-xs">
         <div className="flex items-center gap-2">
           {title && <h3 className="font-bold text-xs sm:text-sm text-slate-900">{title}</h3>}
+          {subtitle && <span className="text-[11px] text-slate-500">{subtitle}</span>}
         </div>
 
       </div>

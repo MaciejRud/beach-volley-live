@@ -86,8 +86,11 @@ export class ResponseParser {
           const matchNumber = String(item["@_NoInTournament"] ?? item.NoInTournament ?? item["@_MatchNumber"] ?? item.MatchNumber ?? "");
           const round = String(item["@_Round"] ?? item.Round ?? "");
           const roundName = String(item["@_RoundName"] ?? item.RoundName ?? item["@_RoundPhase"] ?? item.RoundPhase ?? round);
+          const roundCode = String(item["@_RoundCode"] ?? item.RoundCode ?? "");
           const roundPhase = String(item["@_RoundPhase"] ?? item.RoundPhase ?? "");
           const roundBracket = String(item["@_RoundBracket"] ?? item.RoundBracket ?? "");
+          const winnerRank = Number(item["@_WinnerRank"] ?? item.WinnerRank ?? 0);
+          const loserRank = Number(item["@_LoserRank"] ?? item.LoserRank ?? 0);
           const date = String(item["@_LocalDate"] ?? item.LocalDate ?? "");
           const rawTime = String(item["@_LocalTime"] ?? item.LocalTime ?? "");
           const time = rawTime.length >= 5 ? rawTime.slice(0, 5) : rawTime;
@@ -116,6 +119,16 @@ export class ResponseParser {
           const teamA = this.parseTeam(teamAName, teamAFed, teamANo);
           const teamB = this.parseTeam(teamBName, teamBFed, teamBNo);
 
+          // A named side is the only reliable marker: the feed leaves the name
+          // empty and puts -1 (bye) or 0 (undrawn slot) in NoTeam. Both sides
+          // named means a real fixture even when it ended in a forfeit.
+          const isNamed = (raw: string) => raw.trim() !== "" && raw.trim() !== "TBD";
+          const hasA = isNamed(teamAName);
+          const hasB = isNamed(teamBName);
+          const fixtureState: Match["fixtureState"] =
+            hasA && hasB ? "drawn" : hasA || hasB ? "bye" : "undrawn";
+          const isRealFixture = fixtureState === "drawn";
+
           // Extract set scores
           const sets: SetScore[] = [];
           const set1A = Number(item["@_PointsTeamASet1"] ?? item.PointsTeamASet1 ?? 0);
@@ -130,7 +143,7 @@ export class ResponseParser {
           const set3B = Number(item["@_PointsTeamBSet3"] ?? item.PointsTeamBSet3 ?? 0);
           const dur3 = Number(item["@_DurationSet3"] ?? item.DurationSet3 ?? 0);
 
-          if (set1A > 0 || set1B > 0 || currentSet >= 1 || status === "finished") {
+          if (isRealFixture && (set1A > 0 || set1B > 0 || currentSet >= 1 || status === "finished")) {
             sets.push({ setNumber: 1, scoreA: set1A, scoreB: set1B, duration: dur1, isFinished: currentSet > 1 || status === "finished" });
           }
           if (set2A > 0 || set2B > 0 || currentSet >= 2 || (status === "finished" && (set2A > 0 || set2B > 0))) {
@@ -163,8 +176,12 @@ export class ResponseParser {
             matchNumber,
             round,
             roundName,
+            roundCode,
             roundPhase,
             roundBracket,
+            winnerRank,
+            loserRank,
+            fixtureState,
             date,
             time,
             startsAtUtc,

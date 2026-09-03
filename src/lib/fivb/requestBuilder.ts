@@ -15,7 +15,7 @@
    * Builds XML for matches in a tournament
    */
   static getMatchList(tournamentNo: string | number): string {
-    return `<Request Type="GetBeachMatchList" Fields="No NoTournament NoInTournament Round RoundName RoundPhase RoundBracket MatchNumber LocalDate LocalTime UtcDate UtcTime Court CourtName NoTeamA NoTeamB TeamAName TeamBName TeamAFederationCode TeamBFederationCode MatchPointsA MatchPointsB PointsTeamASet1 PointsTeamBSet1 PointsTeamASet2 PointsTeamBSet2 PointsTeamASet3 PointsTeamBSet3 DurationSet1 DurationSet2 DurationSet3 Status">
+    return `<Request Type="GetBeachMatchList" Fields="No NoTournament NoInTournament Round RoundName RoundCode RoundPhase RoundBracket MatchNumber LocalDate LocalTime UtcDate UtcTime Court CourtName NoTeamA NoTeamB TeamAName TeamBName TeamAFederationCode TeamBFederationCode MatchPointsA MatchPointsB PointsTeamASet1 PointsTeamBSet1 PointsTeamASet2 PointsTeamBSet2 PointsTeamASet3 PointsTeamBSet3 DurationSet1 DurationSet2 DurationSet3 WinnerRank LoserRank Status">
       <Filter NoTournament="${tournamentNo}" />
     </Request>`.trim();
   }
@@ -27,7 +27,7 @@
    * a Filter returns HTTP 400 ParameterMissing.
    */
   static getMatch(matchNo: string | number): string {
-    return `<Request Type="GetBeachMatch" No="${this.numeric(matchNo)}" Fields="No NoTournament NoInTournament Round RoundName RoundPhase RoundBracket MatchNumber LocalDate LocalTime UtcDate UtcTime Court CourtName NoTeamA NoTeamB TeamAName TeamBName TeamAFederationCode TeamBFederationCode MatchPointsA MatchPointsB PointsTeamASet1 PointsTeamBSet1 PointsTeamASet2 PointsTeamBSet2 PointsTeamASet3 PointsTeamBSet3 DurationSet1 DurationSet2 DurationSet3 Status" />`.trim();
+    return `<Request Type="GetBeachMatch" No="${this.numeric(matchNo)}" Fields="No NoTournament NoInTournament Round RoundName RoundCode RoundPhase RoundBracket MatchNumber LocalDate LocalTime UtcDate UtcTime Court CourtName NoTeamA NoTeamB TeamAName TeamBName TeamAFederationCode TeamBFederationCode MatchPointsA MatchPointsB PointsTeamASet1 PointsTeamBSet1 PointsTeamASet2 PointsTeamBSet2 PointsTeamASet3 PointsTeamBSet3 DurationSet1 DurationSet2 DurationSet3 WinnerRank LoserRank Status" />`.trim();
   }
 
   /**

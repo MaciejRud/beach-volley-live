@@ -15,6 +15,11 @@ const ALPHA3_TO_ALPHA2: Record<string, string> = {
 
 export function CountryFlag({ code, className = "" }: Props) {
   const clean = code.toUpperCase().trim();
+
+  // Undrawn bracket slots and byes carry no federation, and an empty code
+  // would request flagcdn.com/h20/.png and leave a blank box in the row.
+  if (clean.length < 2) return null;
+
   const alpha2 = ALPHA3_TO_ALPHA2[clean] || clean.slice(0, 2).toLowerCase();
 
   return (

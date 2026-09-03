@@ -168,9 +168,36 @@ export interface Match {
   matchNumber?: string;
   round: string;
   roundName: string;
+  /**
+   * Short, language-neutral round key: "PA".."PH", "R24", "QF", "LQF", "SF",
+   * "F1", "C9-13". Stable where RoundName is not -- the feed ships typos
+   * ("Final 5rd Place") and abbreviates inconsistently ("QF" vs
+   * "Quarterfinals") -- so ordering and labelling key off this.
+   */
+  roundCode?: string;
   roundPhase?: string;
   /** Pool letter for pool-stage matches (e.g. "A"). */
   roundBracket?: string;
+  /**
+   * Final placing the winner of this match secures, 0 when the round settles
+   * no place. The loser's counterpart is `loserRank`: a quarter-final sends
+   * its loser to 5th at a 32-team event, the 3rd-place match to 4th.
+   */
+  winnerRank?: number;
+  loserRank?: number;
+  /**
+   * Whether the fixture is real.
+   *
+   * The feed lists every bracket slot from the moment a tournament is created,
+   * and pools of three carry a fourth, empty slot. Both arrive as ordinary
+   * match rows -- the empty pool slot even as "finished" -- so they have to be
+   * told apart from a played match before anything renders a score.
+   *
+   * "bye"     - exactly one side named; that pair advanced unopposed.
+   * "undrawn" - neither side named; the round exists, the draw does not yet.
+   * A real forfeit has both sides named and stays "drawn".
+   */
+  fixtureState: "drawn" | "bye" | "undrawn";
   /** Local date at the venue, YYYY-MM-DD. */
   date: string;
   /** Local kick-off at the venue, HH:MM. */
