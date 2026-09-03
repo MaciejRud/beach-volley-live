@@ -218,6 +218,32 @@ both genders, 2022 onwards. **Futures have no statistics** -- 302 tournaments
 scanned, one measured match in total. Any UI showing career figures has to say so,
 or the first visitor looking up a Futures player will think the app is broken.
 
+## Pool Standings
+
+Nobody publishes them: `GetBeachTournamentRanking` and `GetBeachRoundList` both
+answer `NotInNewFormat`, and the CEV results site leaves its own standings tab
+empty. `src/lib/fivb/standings.ts` computes them from the results, following the
+**FIVB Beach Volleyball Sport Operations Manual 2025, pp. 31-32**.
+
+Three things that are easy to get wrong, all of them checked against the manual
+rather than against intuition:
+
+1. **A lost match still scores a point.** Won 2, lost 1, forfeited 0. With equal
+   matches played this orders the same as counting wins, but a forfeit or an
+   uneven pool breaks that equivalence.
+2. **Sets never enter the pool ranking.** Every tie-break is on rally points --
+   the 21-19 kind. Set ratio belongs to a *different* ranking: the cross-pool
+   comparison that seeds the bracket ("match points first, set ratio second,
+   rally point ratio third, tournament seeding fourth"). Mixing the two is the
+   mistake this file exists to avoid.
+3. **The tie-break depends on how many teams are tied.** Two teams split on the
+   whole-pool ratio then head-to-head; three split on the ratio among just those
+   three, then the whole pool, then seeding.
+
+Teams the rules leave level share a rank -- it happens whenever a pool is not a
+full round robin, as at EuroBeachVolley, where two pairs can finish level having
+never met.
+
 ## Cache Strategy (keep the two layers consistent)
 
 | Data | `globalCache` TTL | Route `s-maxage` |

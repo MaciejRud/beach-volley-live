@@ -6,6 +6,7 @@ import { Tournament, Match } from "@/lib/fivb/types";
 import { CountryHelper } from "@/lib/countryHelper";
 import { CountryFlag } from "@/components/CountryFlag";
 import { MatchTable } from "@/components/MatchTable";
+import { PoolStandings } from "@/components/PoolStandings";
 import { groupByDraw } from "@/lib/fivb/phases";
 import { describeBracketSides } from "@/lib/fivb/bracket";
 import { ArrowLeft } from "lucide-react";
@@ -120,14 +121,18 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     </h3>
                   )}
                   {block.phases.map((phase) => (
-                    <MatchTable
-                      key={`${group.section}-${phase.name}`}
-                      matches={phase.matches}
-                      title={phase.label}
-                      subtitle={phase.stake}
-                      sideLabels={sideLabels}
-                      hidePhase
-                    />
+                    <div key={`${group.section}-${phase.name}`} className="space-y-2">
+                      <MatchTable
+                        matches={phase.matches}
+                        title={phase.label}
+                        subtitle={phase.stake}
+                        sideLabels={sideLabels}
+                        hidePhase
+                      />
+                      {/* A pool is a table as much as a list of results, and
+                          nobody else publishes the table. */}
+                      {block.kind === "pools" && <PoolStandings matches={phase.matches} />}
+                    </div>
                   ))}
                 </div>
               ))}
