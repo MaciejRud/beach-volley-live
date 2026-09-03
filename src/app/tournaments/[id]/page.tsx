@@ -121,20 +121,19 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                     </h3>
                   )}
                   {block.phases.map((phase) => (
-                    <div key={`${group.section}-${phase.name}`} className="space-y-2">
-                      <MatchTable
-                        matches={phase.matches}
-                        title={phase.label}
-                        subtitle={phase.stake}
-                        sideLabels={sideLabels}
-                        hidePhase
-                      />
-                      {/* A pool is a table as much as a list of results, and
-                          nobody else publishes the table. Keyed off the round
-                          itself: qualification pools live in the qualification
-                          block, which is not the pool block. */}
-                      {phase.isPool && <PoolStandings matches={phase.matches} />}
-                    </div>
+                    <MatchTable
+                      key={`${group.section}-${phase.name}`}
+                      matches={phase.matches}
+                      title={phase.label}
+                      subtitle={phase.stake}
+                      sideLabels={sideLabels}
+                      hidePhase
+                      /* A pool is a table as much as a list of results, and
+                         nobody else publishes the table. Keyed off the round
+                         itself: qualification pools live in the qualification
+                         block, which is not the pool block. */
+                      expandable={phase.isPool ? <PoolStandings matches={phase.matches} /> : undefined}
+                    />
                   ))}
                 </div>
               ))}

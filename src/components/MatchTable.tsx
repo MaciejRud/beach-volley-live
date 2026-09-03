@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useMemo } from "react";
+import { Fragment, ReactNode, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Match } from "@/lib/fivb/types";
@@ -9,6 +9,7 @@ import { CountryFlag } from "./CountryFlag";
 import { MatchTime } from "./MatchTime";
 import { formatDateHeading, groupByDate } from "@/lib/dateFormatter";
 import { SideLabels } from "@/lib/fivb/bracket";
+import { ChevronDown } from "lucide-react";
 
 interface Props {
   matches: Match[];
@@ -26,10 +27,29 @@ interface Props {
   groupByDay?: boolean;
   /** Hides the phase label where the surrounding section already names it. */
   hidePhase?: boolean;
+  /**
+   * Extra panel folded into the title bar, opened by clicking it. A pool's
+   * table lives here: worth having, but not worth eight of them pushing the
+   * results down the page before anyone asks.
+   */
+  expandable?: ReactNode;
+  /** What the title bar offers to open, e.g. "Standings". */
+  expandableLabel?: string;
 }
 
-export function MatchTable({ matches, title, subtitle, sideLabels, showTournamentColumn = false, groupByDay = false, hidePhase = false }: Props) {
+export function MatchTable({
+  matches,
+  title,
+  subtitle,
+  sideLabels,
+  expandable,
+  expandableLabel = "Standings",
+  showTournamentColumn = false,
+  groupByDay = false,
+  hidePhase = false,
+}: Props) {
   const router = useRouter();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const filtered = matches;
 
@@ -356,13 +376,38 @@ export function MatchTable({ matches, title, subtitle, sideLabels, showTournamen
 
   return (
     <div className="space-y-2.5">
-      {/* Table Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-2">
-          {title && <h3 className="font-bold text-xs sm:text-sm text-slate-900">{title}</h3>}
-          {subtitle && <span className="text-[11px] text-slate-500">{subtitle}</span>}
-        </div>
+      {/* Title bar. Doubles as the toggle for the panel folded inside it. */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+        {expandable ? (
+          <button
+            type="button"
+            onClick={() => setIsExpanded((open) => !open)}
+            aria-expanded={isExpanded}
+            className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-left hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              {title && <h3 className="font-bold text-xs sm:text-sm text-slate-900">{title}</h3>}
+              {subtitle && <span className="text-[11px] text-slate-500">{subtitle}</span>}
+            </span>
+            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              {expandableLabel}
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+              />
+            </span>
+          </button>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+            <div className="flex items-center gap-2">
+              {title && <h3 className="font-bold text-xs sm:text-sm text-slate-900">{title}</h3>}
+              {subtitle && <span className="text-[11px] text-slate-500">{subtitle}</span>}
+            </div>
+          </div>
+        )}
 
+        {expandable && isExpanded && (
+          <div className="border-t border-slate-200">{expandable}</div>
+        )}
       </div>
 
       {/* Dense Table / Cards */}

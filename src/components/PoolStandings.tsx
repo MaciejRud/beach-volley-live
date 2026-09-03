@@ -9,13 +9,15 @@ interface Props {
 }
 
 /**
- * The pool table, above that pool's results.
+ * The pool table, folded into that pool's title bar.
  *
  * Nobody publishes these -- the FIVB ranking endpoints answer NotInNewFormat
  * and the CEV standings tab is empty -- so the figures are computed from the
  * results by `poolStandings`, which follows the FIVB Sport Operations Manual.
- * The header says so, because a number the reader cannot check anywhere else
+ * The footer says so, because a number the reader cannot check anywhere else
  * should say where it came from.
+ *
+ * Renders bare, without a card of its own: the bar that opens it is the card.
  */
 export function PoolStandings({ matches }: Props) {
   const table = poolStandings(matches);
@@ -25,16 +27,7 @@ export function PoolStandings({ matches }: Props) {
   const complete = played.length > 0 && played.every((m) => m.status === "finished");
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-slate-200 bg-slate-50">
-        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
-          Standings
-        </span>
-        <span className="text-[10px] text-slate-400">
-          {complete ? "Final" : "In progress"} · computed from results
-        </span>
-      </div>
-
+    <div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="bg-slate-50/60 text-[10px] uppercase tracking-wider text-slate-500">
@@ -91,6 +84,10 @@ export function PoolStandings({ matches }: Props) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="px-3 py-1.5 border-t border-slate-200 bg-slate-50/60 text-right text-[10px] text-slate-400">
+        {complete ? "Final" : "In progress"} · computed from results, FIVB Sport Operations Manual
       </div>
     </div>
   );
