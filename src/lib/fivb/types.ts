@@ -49,12 +49,19 @@ export interface Team {
   rank?: number;
   /** Team id in the FIVB feed, used to join entry-list seeding onto a match. */
   teamNo?: string;
+  /**
+   * Which draw `seed` counts in. A pair that qualifies holds two unrelated
+   * positions -- 6th in the qualification, 26th in the main draw -- so the
+   * number is meaningless without saying which one it is.
+   */
+  seedScope?: "mainDraw" | "qualification";
 }
 
 /** Seeding for one team, read from the tournament entry list. */
 export interface TeamSeed {
   teamNo: string;
-  seed?: number;
+  mainDrawSeed?: number;
+  qualificationSeed?: number;
 }
 
 /** One player as listed on a tournament entry. */
@@ -76,7 +83,10 @@ export interface TeamEntry {
   teamNo: string;
   name: string;
   federationCode: string;
-  seed?: number;
+  /** Draw position in the main draw, absent for a pair that did not reach it. */
+  mainDrawSeed?: number;
+  /** Draw position in the qualification, absent for a directly entered pair. */
+  qualificationSeed?: number;
   player1?: PlayerRef;
   player2?: PlayerRef;
 }

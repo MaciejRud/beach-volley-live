@@ -4,6 +4,9 @@ import { Tournament, Match, TeamSeed, TeamEntry, MatchStatistics, PolishTeamsSum
 import { isMeasured } from "./statistics";
 import { globalCache } from "../cache";
 
+/** RoundPhase value the feed uses for qualification rounds. */
+const QUALIFICATION_PHASE = "3";
+
 export class FivbClient {
   private static readonly API_URL = "https://www.fivb.org/vis2009/XmlRequest.asmx";
   private static readonly TIMEOUT_MS = 10000;
@@ -107,7 +110,11 @@ export class FivbClient {
     const entries = await this.getTeamEntries(tournamentNo);
     const seeds = new Map<string, TeamSeed>();
     for (const entry of entries.values()) {
-      seeds.set(entry.teamNo, { teamNo: entry.teamNo, seed: entry.seed });
+      seeds.set(entry.teamNo, {
+        teamNo: entry.teamNo,
+        mainDrawSeed: entry.mainDrawSeed,
+        qualificationSeed: entry.qualificationSeed,
+      });
     }
     return seeds;
   }
@@ -193,13 +200,27 @@ export class FivbClient {
 
     if (seeds.size === 0) return matches;
 
-    const withSeed = (team: Match["teamA"]): Match["teamA"] => {
+    // A pair that comes through the qualification carries two unrelated draw
+    // positions, and the match says which one is meant: showing its main-draw
+    // number in a qualification table reads as a seeding it did not have yet.
+    const withSeed = (team: Match["teamA"], isQualification: boolean): Match["teamA"] => {
       const entry = team.teamNo ? seeds.get(team.teamNo) : undefined;
       if (!entry) return team;
-      return { ...team, seed: entry.seed };
+
+      const seed = isQualification ? entry.qualificationSeed : entry.mainDrawSeed;
+      if (!seed) return team;
+
+      return { ...team, seed, seedScope: isQualification ? "qualification" : "mainDraw" };
     };
 
-    return matches.map((m) => ({ ...m, teamA: withSeed(m.teamA), teamB: withSeed(m.teamB) }));
+    return matches.map((m) => {
+      const isQualification = m.roundPhase === QUALIFICATION_PHASE;
+      return {
+        ...m,
+        teamA: withSeed(m.teamA, isQualification),
+        teamB: withSeed(m.teamB, isQualification),
+      };
+    });
   }
 
   /**

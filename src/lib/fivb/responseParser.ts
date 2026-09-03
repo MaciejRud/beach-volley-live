@@ -255,13 +255,15 @@ export class ResponseParser {
         const mainPos = Number(item["@_PositionInMainDraw"] ?? item.PositionInMainDraw ?? 0);
         const qualPos = Number(item["@_PositionInQualification"] ?? item.PositionInQualification ?? 0);
 
-        const seed = mainPos > 0 ? mainPos : qualPos > 0 ? qualPos : undefined;
+        // Kept apart rather than collapsed into one number: which one to show
+        // depends on the round a match belongs to.
 
         entries.set(teamNo, {
           teamNo,
           name: String(item["@_Name"] ?? item.Name ?? ""),
           federationCode: String(item["@_FederationCode"] ?? item.FederationCode ?? "").toUpperCase(),
-          seed,
+          mainDrawSeed: mainPos > 0 ? mainPos : undefined,
+          qualificationSeed: qualPos > 0 ? qualPos : undefined,
           player1: this.parsePlayerRef(item, 1),
           player2: this.parsePlayerRef(item, 2),
         });

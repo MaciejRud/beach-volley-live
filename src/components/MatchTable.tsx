@@ -87,12 +87,16 @@ export function MatchTable({ matches, title, subtitle, sideLabels, showTournamen
     return sideLabels?.get(m.no)?.[side] ?? "TBD";
   };
 
-  /** Draw position from the entry list, rendered as results pages do: "[3]". */
+  /**
+   * Draw position from the entry list, rendered as results pages do: "[3]".
+   * Qualification positions are prefixed, so a "[Q3]" in a qualification table
+   * is never read as the "[3]" seeding of the main draw.
+   */
   const renderSeed = (team: Match["teamA"]) => {
     if (!team.seed) return null;
     return (
       <span className="ml-1 font-mono text-[10px] font-bold text-slate-400 whitespace-nowrap">
-        [{team.seed}]
+        [{team.seedScope === "qualification" ? "Q" : ""}{team.seed}]
       </span>
     );
   };
