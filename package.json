@@ -12,7 +12,8 @@
     "test:stats": "tsx src/lib/fivb/test-stats.ts",
     "stats:backfill": "tsx scripts/backfill-stats.ts",
     "stats:aggregate": "tsx scripts/build-aggregates.ts",
-    "stats:players": "tsx scripts/build-player-data.ts"
+    "stats:players": "tsx scripts/build-player-data.ts",
+    "test:phases": "tsx src/lib/fivb/test-phases.ts"
   },
   "dependencies": {
     "@serwist/next": "^9.5.12",
