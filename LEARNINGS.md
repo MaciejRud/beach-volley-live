@@ -192,3 +192,66 @@ Rozwiązanie było proste (rebase, przegenerowanie pliku, moja wersja wygrywa),
 ale mechanizm warto pamiętać: **bot commituje pliki wynikowe, więc każda lokalna
 zmiana generatora kłóci się z jego ostatnim przebiegiem**. Przy pracy nad
 czymkolwiek, co produkuje zawartość `data/`, najpierw `git pull`.
+
+## 2026-09-03: dwa rankingi w jednym regulaminie
+
+Tabele grup liczymy sami, bo nikt ich nie publikuje. Znalazłem klauzulę w FIVB
+Sport Operations Manual, zaimplementowałem - i dwie pule z siedmiu turniejów
+wyszły sprzecznie z rzeczywistością. Wyglądało to na błąd w moim tie-breaku.
+
+Nie był to błąd. Manual ma **dwa osobne rankingi**, a ja czytałem jeden:
+
+- **wewnątrz grupy**: punkty meczowe, potem stosunek małych punktów (setów tam
+  nie ma w ogóle)
+- **między grupami**: "match points first, **set ratio** second, rally point
+  ratio third, tournament seeding fourth"
+
+Ten drugi decyduje, który drugi z grupy wchodzi do R16, a który do R18 - czyli
+dokładnie to, co mierzyłem jako "sprawdzenie" tabeli. Miara testowała nie tę
+regułę, którą implementowałem.
+
+Lekcja jest o testowaniu, nie o siatkówce: **zanim uznam rozbieżność za błąd
+implementacji, sprawdzam, czy miara mierzy to samo, co kod robi**. Trzy razy z
+rzędu poprawiałem tu metrykę (głębokość w drabince → numer meczu wejścia →
+runda wejścia), zanim zobaczyłem, że nawet poprawna metryka odpowiada na inne
+pytanie.
+
+## 2026-09-03: 100% albo TBD - próg, który trzeba zmierzyć, nie ustawić
+
+Algorytm podstawiający "Winner M69" zamiast TBD wyprowadza okablowanie drabinki
+z rozegranych turniejów. Kluczowe pytanie brzmiało: jak dopasować regułę do
+turnieju o nieznanym formacie.
+
+Zmierzyłem cztery kryteria na sezonie 2026 (reguły uczone na 2025):
+
+| kryterium | trafność | pokrycie U20 |
+|---|---|---|
+| tylko dokładny format | 100.00% | 0 slotów |
+| dokładny, inaczej dowolny podzbiór | 99.91% | 28 |
+| zawsze podzbiór | 98.35% | 28 |
+| **dokładny, inaczej podzbiór ≥80% rund** | **100.00%** | **28** |
+
+Gdybym wybrał "intuicyjnie sensowne" luźne dopasowanie, wszedłbym z 98% - i 128
+złych nazw na 40 turniejach. Różnica między 98% a 100% to nie zaokrąglenie,
+tylko **błędna nazwa przy finale**, czyli dokładnie ten wiersz, na który ludzie
+patrzą. Próg 80% nie jest wyczuty, tylko wybrany z tabeli pomiarów.
+
+Wniosek na przyszłość: kiedy stawiam sobie próg jakości, od razu buduję pomiar,
+który go weryfikuje out-of-sample. Bez tego "wydaje się dobre" wygrywa z
+"jest dobre".
+
+## 2026-09-03: dev server potrafi serwować stary build
+
+Poprawka w komponencie flagi nie pojawiała się na stronie mimo czterech
+restartów `npm run dev`. Kod na dysku był dobry, `tsc` czysty, a przeglądarka
+uparcie renderowała starą wersję - 166 pustych obrazków, które właśnie
+usunąłem.
+
+Przyczyna: w `.next/static/chunks/` leżały artefakty z wcześniejszego
+`npm run build`. Dev server podawał je zamiast przekompilować. CLAUDE.md
+opisuje wariant z `MODULE_NOT_FOUND` przy buildzie; ten jest cichszy, bo nic
+nie pada - po prostu widzisz nieaktualną stronę.
+
+Rozpoznanie zajęło cztery restarty, bo szukałem błędu w kodzie. Szybszy test:
+`grep` po skompilowanym chunku w `.next/static/chunks/` za fragmentem nowego
+kodu. Nie ma go tam - to nie kod jest winny, tylko cache.
