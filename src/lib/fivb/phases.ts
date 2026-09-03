@@ -27,6 +27,12 @@ export type BlockKind = "bracket" | "places" | "pools";
 export interface PhaseGroup {
   /** Round name straight from the feed, e.g. "Pool A" or "Semifinals". */
   name: string;
+  /**
+   * Whether this round is a round robin, and so has a table as well as a list
+   * of results. Carried per phase rather than read off the block, because
+   * qualification pools sit in the qualification block, not the pool one.
+   */
+  isPool: boolean;
   /** What to show: the feed's name, or a repaired one where it is defective. */
   label: string;
   /** What the round settles, where the label does not already say it. */
@@ -55,11 +61,14 @@ export interface DrawGroup {
 const QUALIFICATION_PHASE = "3";
 const MAIN_DRAW_PHASE = "4";
 
+/** Round robin rounds, in both draws: "PA".."PH". */
+const POOL = /^P[A-Z]$/;
+
 const FINAL = /^F(\d+)$/;
 const CLASSIFICATION = /^C(\d+)[-/](\d+)$/;
 const PLACEMENT_SEMI = /^SF(\d+)[-/](\d+)$/;
 const ROUND_OF = /^R(\d+)$/;
-const POOL = /^P([A-Z])$/;
+const POOL_LETTER = /^P([A-Z])$/;
 const ROMAN: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, V: 5 };
 
 const BLOCK_TITLES: Record<BlockKind, string> = {
@@ -119,7 +128,7 @@ function ordinal(n: number): string {
  * stages and the second orders rounds within a stage.
  */
 function classify(code: string, bracket: string, name: string): { block: BlockKind; key: number[] } {
-  const pool = code.match(POOL);
+  const pool = code.match(POOL_LETTER);
   if (pool) return { block: "pools", key: [pool[1].charCodeAt(0)] };
 
   const final = code.match(FINAL);
@@ -221,6 +230,7 @@ function buildPhase(name: string, items: Match[]): PhaseGroup {
   const label = labelFor(first.roundCode ?? "", name);
   return {
     name,
+    isPool: POOL.test(first.roundCode ?? ""),
     label,
     stake: stakeFor(first.winnerRank ?? 0, first.loserRank ?? 0, label),
     // Ascending match number reads like the schedule inside a round.

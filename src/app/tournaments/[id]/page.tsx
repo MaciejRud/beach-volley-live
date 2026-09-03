@@ -130,8 +130,10 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                         hidePhase
                       />
                       {/* A pool is a table as much as a list of results, and
-                          nobody else publishes the table. */}
-                      {block.kind === "pools" && <PoolStandings matches={phase.matches} />}
+                          nobody else publishes the table. Keyed off the round
+                          itself: qualification pools live in the qualification
+                          block, which is not the pool block. */}
+                      {phase.isPool && <PoolStandings matches={phase.matches} />}
                     </div>
                   ))}
                 </div>
