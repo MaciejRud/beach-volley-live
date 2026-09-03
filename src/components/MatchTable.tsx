@@ -8,9 +8,16 @@ import { CountryHelper } from "@/lib/countryHelper";
 import { CountryFlag } from "./CountryFlag";
 import { MatchTime } from "./MatchTime";
 import { formatDateHeading, groupByDate } from "@/lib/dateFormatter";
+import { SideLabels } from "@/lib/fivb/bracket";
 
 interface Props {
   matches: Match[];
+  /**
+   * Who will play an undrawn fixture, keyed by match number: "Winner M69".
+   * Built from the whole tournament, so it has to be passed in rather than
+   * derived from the single round this table renders.
+   */
+  sideLabels?: Map<string, SideLabels>;
   title?: string;
   /** Secondary line under the title, e.g. what the round settles. */
   subtitle?: string;
@@ -21,7 +28,7 @@ interface Props {
   hidePhase?: boolean;
 }
 
-export function MatchTable({ matches, title, subtitle, showTournamentColumn = false, groupByDay = false, hidePhase = false }: Props) {
+export function MatchTable({ matches, title, subtitle, sideLabels, showTournamentColumn = false, groupByDay = false, hidePhase = false }: Props) {
   const router = useRouter();
 
   const filtered = matches;
@@ -69,9 +76,16 @@ export function MatchTable({ matches, title, subtitle, showTournamentColumn = fa
     return null;
   };
 
-  /** The side of a bye that has no opponent; "TBD" would imply one is coming. */
-  const sideName = (team: Match["teamA"], m: Match) =>
-    m.fixtureState === "bye" && team.name === "TBD" ? "—" : team.name;
+  /**
+   * What to write where a team is not known yet: the pair that will arrive
+   * ("Winner M69") when the bracket says so, an em dash on the empty side of a
+   * bye, and otherwise the plain "TBD" the feed gives us.
+   */
+  const sideName = (team: Match["teamA"], m: Match, side: "A" | "B") => {
+    if (team.name !== "TBD") return team.name;
+    if (m.fixtureState === "bye") return "—";
+    return sideLabels?.get(m.no)?.[side] ?? "TBD";
+  };
 
   /** Draw position from the entry list, rendered as results pages do: "[3]". */
   const renderSeed = (team: Match["teamA"]) => {
@@ -87,9 +101,9 @@ export function MatchTable({ matches, title, subtitle, showTournamentColumn = fa
    * Mobile layout puts one player per line. Falls back to the combined team
    * name for placeholder entries (TBD) where the API sends no player split.
    */
-  const renderPlayerLines = (team: Match["teamA"], m: Match) => {
+  const renderPlayerLines = (team: Match["teamA"], m: Match, side: "A" | "B") => {
     if (!team.player1 && !team.player2) {
-      return <div className="truncate">{sideName(team, m)}</div>;
+      return <div className="truncate">{sideName(team, m, side)}</div>;
     }
     return (
       <>
@@ -154,7 +168,7 @@ export function MatchTable({ matches, title, subtitle, showTournamentColumn = fa
                   m.winner === "A" ? "font-bold text-slate-950" : "font-medium"
                 }`}
               >
-                {renderPlayerLines(m.teamA, m)}
+                {renderPlayerLines(m.teamA, m, "A")}
               </div>
               <CountryFlag code={m.teamA.countryCode} className="text-sm shrink-0" />
             </div>
@@ -174,7 +188,7 @@ export function MatchTable({ matches, title, subtitle, showTournamentColumn = fa
                   m.winner === "B" ? "font-bold text-slate-950" : "font-medium"
                 }`}
               >
-                {renderPlayerLines(m.teamB, m)}
+                {renderPlayerLines(m.teamB, m, "B")}
               </div>
             </div>
           </div>
@@ -281,7 +295,7 @@ export function MatchTable({ matches, title, subtitle, showTournamentColumn = fa
                 m.winner === "A" ? "font-bold text-slate-950" : ""
               }`}
             >
-              {sideName(m.teamA, m)}
+              {sideName(m.teamA, m, "A")}
             </span>
             {renderSeed(m.teamA)}
             <CountryFlag code={m.teamA.countryCode} className="text-sm" />
@@ -313,7 +327,7 @@ export function MatchTable({ matches, title, subtitle, showTournamentColumn = fa
                 m.winner === "B" ? "font-bold text-slate-950" : ""
               }`}
             >
-              {sideName(m.teamB, m)}
+              {sideName(m.teamB, m, "B")}
             </span>
             {renderSeed(m.teamB)}
           </div>

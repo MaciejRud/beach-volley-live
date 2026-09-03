@@ -7,6 +7,7 @@ import { CountryHelper } from "@/lib/countryHelper";
 import { CountryFlag } from "@/components/CountryFlag";
 import { MatchTable } from "@/components/MatchTable";
 import { groupByDraw } from "@/lib/fivb/phases";
+import { describeBracketSides } from "@/lib/fivb/bracket";
 import { ArrowLeft } from "lucide-react";
 
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,6 +25,10 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   // data rather than on a list of tiers. groupByDraw returns nothing where a
   // feed omits it, and the flat list below takes over.
   const drawGroups = useMemo(() => groupByDraw(matches), [matches]);
+
+  // Names the sides of fixtures the draw has not reached yet. Needs the whole
+  // tournament, because a slot is described by the match that feeds it.
+  const sideLabels = useMemo(() => describeBracketSides(matches), [matches]);
 
   const fetchDetail = async (silent: boolean = false) => {
     try {
@@ -120,6 +125,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
                       matches={phase.matches}
                       title={phase.label}
                       subtitle={phase.stake}
+                      sideLabels={sideLabels}
                       hidePhase
                     />
                   ))}
@@ -129,7 +135,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
           ))}
         </div>
       ) : (
-        <MatchTable matches={matches} title="Tournament matches" />
+        <MatchTable matches={matches} title="Tournament matches" sideLabels={sideLabels} />
       )}
     </div>
   );

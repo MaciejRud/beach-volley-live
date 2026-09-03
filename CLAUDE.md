@@ -137,7 +137,17 @@ npm run test:stats   # Smoke-test the statistics layer against live data
 
 npm run stats:backfill   # Fetch new tournaments into data/stats/ (idempotent)
 npm run stats:aggregate  # Rebuild data/aggregates.json from the archive
+
+npm run test:phases      # Snapshot of how rounds are grouped and ordered
+npm run bracket:rules    # Re-derive src/lib/fivb/bracketRules.json
 ```
+
+`bracket:rules` replays finished tournaments to recover how each draw format is
+wired, so the app can print "Winner M69" where the feed only has a blank slot.
+Re-run it when a tour changes its draw, and read the out-of-sample figure it
+prints: rules learned from the previous seasons have to predict the newest one
+exactly. Anything below 100% means the matching criterion is too loose, not that
+the number is good enough. Pass `--cache <path>` to tune without refetching.
 
 Run `stats:aggregate` after every `stats:backfill` -- the aggregate file is what
 the app reads at runtime, and a stale one silently shows outdated averages.
