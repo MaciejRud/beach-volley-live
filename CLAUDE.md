@@ -173,7 +173,10 @@ Data model:         https://www.fivb.org/VisSDK/Fivb.Vis.Model/#Fivb.Vis.Model.h
    against hammering the FIVB API.
 4. **`export const dynamic = "force-dynamic"`** on every route handler reading
    live data.
-5. Dates displayed to users: **DD-MM-YYYY** (European style).
+5. Dates displayed to users: **DD-MM-YYYY** (European style). The one exception
+   is the dense match tables, which use **DD.MM.YY** -- on mobile the date shares
+   a 44px column with the kick-off time, and the full form does not fit.
+   `formatDateCompact` in `src/lib/dateFormatter.ts` is the only place it is built.
 6. Styling: Tailwind utility classes inline. No CSS modules, no styled-components.
 7. Components in `src/components/` stay presentational - fetching and data
    shaping belong in `src/lib/` or the page/route.

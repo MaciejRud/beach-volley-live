@@ -141,8 +141,8 @@ export function MatchTable({ matches, title, subtitle, showTournamentColumn = fa
             sets on the right. */}
         <div className="flex items-center gap-2.5">
           <div className="shrink-0 w-11 font-mono text-[10px] text-slate-400 leading-tight">
-            <MatchTime match={m} stacked className="text-[11px] font-bold text-slate-600" />
-            {m.court && <div className="mt-0.5">C{m.court}</div>}
+            <MatchTime match={m} stacked showDate={!groupByDay} className="text-[11px] font-bold text-slate-600" />
+            {m.matchNumber && <div className="mt-0.5 font-bold">M{m.matchNumber}</div>}
           </div>
 
           {/* Teams stay left/right; each team's players stack vertically so
@@ -192,15 +192,16 @@ export function MatchTable({ matches, title, subtitle, showTournamentColumn = fa
           </div>
         </div>
 
-        {/* Context line: tournament, phase and match number, only where the
-            surrounding section does not already state them. */}
-        {(showTournamentColumn || !hidePhase || m.matchNumber) && (
+        {/* Context line: court, then phase and tournament where the surrounding
+            section does not already state them. The match number sits in the
+            time column instead, which leaves this line room for the court. */}
+        {(showTournamentColumn || !hidePhase || m.court) && (
           <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400 truncate">
-            {m.matchNumber && <span className="font-mono font-bold shrink-0">M{m.matchNumber}</span>}
+            {m.court && <span className="font-mono font-bold shrink-0">C{m.court}</span>}
             {!hidePhase && m.roundName && <span className="truncate">{m.roundName}</span>}
             {showTournamentColumn && m.tournamentTitle && (
               <>
-                {(!hidePhase && m.roundName) || m.matchNumber ? <span>•</span> : null}
+                {(!hidePhase && m.roundName) || m.court ? <span>•</span> : null}
                 <span className="truncate">{m.tournamentTitle}</span>
               </>
             )}
@@ -238,7 +239,7 @@ export function MatchTable({ matches, title, subtitle, showTournamentColumn = fa
 
         {/* Time -- own column so values line up across rows */}
         <td className="py-1 px-2 whitespace-nowrap font-mono text-xs font-bold text-slate-700 tabular-nums">
-          <MatchTime match={m} />
+          <MatchTime match={m} showDate={!groupByDay} />
         </td>
 
         {/* Tournament name (optional column) */}

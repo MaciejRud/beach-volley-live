@@ -46,6 +46,29 @@ export function formatDateHeading(isoDate: string): string {
   return label;
 }
 
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * `DD.MM.YY` -- the dense-table form, deliberately shorter than the project's
+ * `DD-MM-YYYY` convention: it shares a 44px column with the kick-off time on
+ * mobile, where the full form does not fit.
+ */
+export function formatDateCompact(isoDate: string): string {
+  const d = toUtcDate(isoDate);
+  if (!d) return "";
+  return `${pad(d.getUTCDate())}.${pad(d.getUTCMonth() + 1)}.${pad(d.getUTCFullYear() % 100)}`;
+}
+
+/**
+ * The same form for an instant already resolved to the viewer's timezone.
+ *
+ * A late match abroad can fall on a different day here than at the venue, so
+ * the date has to come from the same instant as the time shown beside it.
+ */
+export function formatDateCompactLocal(d: Date): string {
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${pad(d.getFullYear() % 100)}`;
+}
+
 /** Short form for dense rows: `DD-MM-YYYY` per the project's date convention. */
 export function formatDateShort(isoDate: string): string {
   const d = toUtcDate(isoDate);
