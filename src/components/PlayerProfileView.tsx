@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CountryFlag } from "./CountryFlag";
 import { ArchiveScopeNote } from "./ArchiveScopeNote";
 import { FormChart } from "./FormChart";
+import { PartnerTable } from "./PartnerTable";
 import { PlayerStandings } from "./PlayerStandings";
 import { StatTotals } from "@/lib/stats/aggregate";
 import { METRIC_DISPLAY } from "@/lib/stats/metricDisplay";
@@ -132,6 +133,10 @@ export function PlayerProfileView({
       {/* One period control over both views: the player's own breakdown, and
           where that period's numbers put them among everyone else's. */}
       <PlayerStandings scopes={profile.scopes} />
+
+      {/* Who they played with, before the form chart -- a run of tournaments
+          reads differently once you know the pairing behind it. */}
+      <PartnerTable partners={profile.partners} />
 
       {/* The trend, ahead of the season table that states it row by row. */}
       <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">

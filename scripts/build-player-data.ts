@@ -102,6 +102,11 @@ async function main() {
           (perPlayerPairPoints.get(line.playerNo) ?? 0) + pairPoints[side]
         );
 
+        // The other player on this side of the net. Matched by number for the
+        // same reason as the side itself: the tour has two Mols.
+        const ownSide = onA ? info.pa : info.pb;
+        const partner = ownSide.find((no) => no !== line.playerNo);
+
         (perPlayerMatches.get(line.playerNo) ??
           perPlayerMatches.set(line.playerNo, []).get(line.playerNo)!)
           .push({
@@ -115,6 +120,7 @@ async function main() {
                   .join(", "),
             w: won,
             t: encodeTotals(matchTotals),
+            ...(partner ? { p: partner } : {}),
           });
       }
     }

@@ -51,6 +51,15 @@ export interface PlayerFormMatch {
   w: boolean;
   /** This player's totals in the match, positional -- see AGGREGATE_COLUMNS. */
   t: number[];
+  /**
+   * The partner's player number for this match.
+   *
+   * Stored per match rather than per tournament: a pair can change mid-event
+   * through injury, and the archive has to be able to say which matches went
+   * with whom. Optional, so files written before this was added stay readable
+   * -- a match without it simply does not count towards any partner.
+   */
+  p?: string;
 }
 
 /** One tournament in a player's career, as stored: totals in AGGREGATE_COLUMNS order. */

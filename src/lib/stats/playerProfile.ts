@@ -19,9 +19,9 @@ import {
  * Server-side reads for the players section.
  *
  * All four files are part of the deployment and cannot change while the process
- * runs, so each is parsed once and kept. The form file is the large one -- two
- * and a half megabytes -- which is exactly why it is read here and never sent
- * to the browser.
+ * runs, so each is parsed once and kept. The form file is the large one -- some
+ * eight megabytes -- which is exactly why it is read here and never sent to the
+ * browser.
  */
 
 async function readJson<T>(file: string): Promise<T | null> {
@@ -123,6 +123,28 @@ export interface TournamentRow {
   }[];
 }
 
+/**
+ * One partner, and how this player did alongside them.
+ *
+ * Measured matches only. A pair can have played two full seasons together with
+ * statistics from a handful of events, so the figures here describe the record,
+ * not the partnership -- which the table has to say out loud.
+ */
+export interface PartnerRow {
+  playerNo: string;
+  name: string;
+  federationCode: string;
+  /** Whether this partner clears the listing bar and so has a page to link to. */
+  listed: boolean;
+  /** Seasons they were measured together, oldest first. */
+  seasons: number[];
+  matches: number;
+  won: number;
+  lost: number;
+  /** This player's own totals in those matches -- not the pair's combined. */
+  totals: StatTotals;
+}
+
 /** The headline figures, summed over everything in the archive. */
 export interface CareerSummary {
   tournaments: number;
@@ -146,6 +168,8 @@ export interface PlayerProfile {
   summary: CareerSummary;
   /** The whole archive first, then one entry per season, newest first. */
   scopes: ScopeRow[];
+  /** Most-played partner first. */
+  partners: PartnerRow[];
   /** Newest tournament first. */
   tournaments: TournamentRow[];
 }
@@ -419,6 +443,55 @@ export async function loadPlayerProfile(playerNo: string): Promise<PlayerProfile
   }));
 
   const rawForm = form?.players[playerNo] ?? [];
+
+  // Who this player was standing next to, match by match. Grouped on the
+  // partner's number rather than their name: the tour has two Mols, and a pair
+  // that changes mid-tournament through injury has to split correctly.
+  const byPartner = new Map<string, PartnerRow>();
+  for (const event of rawForm) {
+    for (const match of event.matches ?? []) {
+      if (!match.p) continue;
+
+      let row = byPartner.get(match.p);
+      if (!row) {
+        const known = directory?.[match.p];
+        row = {
+          playerNo: match.p,
+          name: known?.name ?? `#${match.p}`,
+          federationCode: known?.federationCode ?? "",
+          // Absence from the form file is the listing threshold talking: that
+          // partner has no page, so their name must not become a dead link.
+          listed: Boolean(form?.players[match.p]),
+          seasons: [],
+          matches: 0,
+          won: 0,
+          lost: 0,
+          totals: emptyTotals(),
+        };
+        byPartner.set(match.p, row);
+      }
+
+      row.matches += 1;
+      if (match.w) row.won += 1;
+      else row.lost += 1;
+      if (!row.seasons.includes(event.season)) row.seasons.push(event.season);
+      addTotals(row.totals, decodeTotalsArray(match.t, form!.columns));
+    }
+  }
+
+  const partners = [...byPartner.values()]
+    .map((row) => ({ ...row, seasons: row.seasons.sort((a, b) => a - b) }))
+    // Most-played first: the reader is looking for the long-standing pairing,
+    // not the one-off stand-in from a single qualifier. Name last, so two
+    // one-match partners level on points order alphabetically rather than by
+    // whichever tournament the archive happened to be read in.
+    .sort(
+      (a, b) =>
+        b.matches - a.matches ||
+        b.totals.pointTotal - a.totals.pointTotal ||
+        a.name.localeCompare(b.name)
+    );
+
   const won = rawForm.reduce((total, t) => total + (t.won ?? 0), 0);
   const teamPoints = rawForm.reduce((total, t) => total + (t.teamPoints ?? 0), 0);
   const pairPoints = rawForm.reduce((total, t) => total + (t.pairPoints ?? 0), 0);
@@ -441,6 +514,7 @@ export async function loadPlayerProfile(playerNo: string): Promise<PlayerProfile
     career,
     summary,
     scopes,
+    partners,
     tournaments,
   };
 }
