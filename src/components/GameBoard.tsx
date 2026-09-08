@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { CountryFlag } from "./CountryFlag";
 import { DistributionRow } from "./StatBars";
 import { METRIC_DISPLAY } from "@/lib/stats/metricDisplay";
@@ -282,7 +283,8 @@ export function GameBoard({ data }: { data: GameData }) {
           <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
             <h2 className="text-xs font-bold text-slate-900">Your guesses</h2>
             <span className="text-[11px] text-slate-500">
-              arrows point from your guess towards the answer, over {scope.label}
+              green up, red down &mdash; which way the answer sits from your guess, over{" "}
+              {scope.label}
             </span>
           </header>
           <div className="overflow-x-auto">
@@ -318,20 +320,27 @@ export function GameBoard({ data }: { data: GameData }) {
                       {METRIC_DISPLAY.map((metric, index) => {
                         const mine = guessValues?.[index] ?? null;
                         const theirs = answerValues?.[index] ?? null;
-                        let mark = "·";
-                        let tone = "text-slate-300";
+
+                        // Direction only, not judgement -- the header says so,
+                        // which it has to: on reception errors the green arrow
+                        // points at the worse number.
+                        let mark = <span className="text-slate-300">·</span>;
                         if (correct) {
-                          mark = "✓";
-                          tone = "text-emerald-600";
+                          mark = <span className="text-base text-emerald-600">✓</span>;
                         } else if (mine !== null && theirs !== null) {
-                          if (theirs > mine) { mark = "↑"; tone = "text-slate-700"; }
-                          else if (theirs < mine) { mark = "↓"; tone = "text-slate-700"; }
-                          else { mark = "="; tone = "text-emerald-600"; }
+                          if (theirs > mine) {
+                            mark = <ArrowUp className="mx-auto h-4 w-4 text-emerald-600" strokeWidth={3.5} />;
+                          } else if (theirs < mine) {
+                            mark = <ArrowDown className="mx-auto h-4 w-4 text-red-500" strokeWidth={3.5} />;
+                          } else {
+                            mark = <span className="text-sm font-black text-slate-900">=</span>;
+                          }
                         }
+
                         return (
                           <td
                             key={metric.key}
-                            className={`py-1.5 px-1 text-center font-bold ${tone}`}
+                            className="py-1.5 px-1 text-center font-bold"
                             title={
                               correct || mine === null || theirs === null
                                 ? metric.label
