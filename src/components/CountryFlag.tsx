@@ -3,6 +3,15 @@ interface Props {
   className?: string;
 }
 
+/**
+ * FIVB federation code to the ISO alpha-2 the flag CDN wants.
+ *
+ * Explicit, with no truncating fallback, because the first two letters are not
+ * merely unreliable -- they are confidently wrong. BEN (Benin) truncates to
+ * "be" and would fly Belgium's flag, NIG (Niger) to "ni" and Nicaragua's, PAR
+ * (Paraguay) to "pa" and Panama's, LBR (Liberia) to "lb" and Lebanon's. A
+ * missing flag is a gap; the wrong flag is a lie.
+ */
 const ALPHA3_TO_ALPHA2: Record<string, string> = {
   POL: "pl", NOR: "no", SWE: "se", BRA: "br", USA: "us", GER: "de",
   NED: "nl", ITA: "it", ESP: "es", FRA: "fr", LAT: "lv", LTU: "lt",
@@ -11,7 +20,15 @@ const ALPHA3_TO_ALPHA2: Record<string, string> = {
   JPN: "jp", CHN: "cn", GBR: "gb", ENG: "gb", TUR: "tr", ISR: "il",
   NZL: "nz", MEX: "mx", GRE: "gr", BEL: "be", DEN: "dk", SRB: "rs",
   SLO: "si", SVK: "sk", HUN: "hu", CRO: "hr", BUL: "bg", ROU: "ro",
+
+  // Federations the tour visits outside Europe, added when the country picker
+  // started listing every federation with matches rather than Poland alone.
+  BEN: "bj", NIG: "ne", NGR: "ng", GHA: "gh", CIV: "ci", TAN: "tz",
+  BDI: "bi", EGY: "eg", UGA: "ug", KEN: "ke", SUD: "sd", LBR: "lr",
+  URU: "uy", PAR: "py", BOL: "bo", COL: "co", ECU: "ec", VEN: "ve",
+  PER: "pe", IRI: "ir",
 };
+
 
 export function CountryFlag({ code, className = "" }: Props) {
   const clean = code.toUpperCase().trim();
@@ -20,7 +37,20 @@ export function CountryFlag({ code, className = "" }: Props) {
   // would request flagcdn.com/h20/.png and leave a blank box in the row.
   if (clean.length < 2) return null;
 
-  const alpha2 = ALPHA3_TO_ALPHA2[clean] || clean.slice(0, 2).toLowerCase();
+  const alpha2 = ALPHA3_TO_ALPHA2[clean];
+
+  // An unmapped federation gets a neutral tile rather than a guess: it holds
+  // the row's alignment, says the code on hover, and never claims a country.
+  if (!alpha2) {
+    return (
+      <span
+        title={clean}
+        aria-label={clean}
+        className={`inline-block rounded-[2px] shrink-0 align-middle bg-slate-200 ring-1 ring-slate-900/20 ${className}`}
+        style={{ width: "1.1em", height: "0.8em" }}
+      />
+    );
+  }
 
   return (
     <img

@@ -162,8 +162,6 @@ export class ResponseParser {
             else if (setsWonB > setsWonA) winner = "B";
           }
 
-          const isPolishMatch = teamA.countryCode === "POL" || teamB.countryCode === "POL";
-
           return {
             id: no,
             no,
@@ -196,7 +194,6 @@ export class ResponseParser {
             setsWonB,
             sets,
             winner,
-            isPolishMatch,
           };
         });
     } catch (err) {

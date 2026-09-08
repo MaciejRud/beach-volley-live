@@ -4,13 +4,19 @@ import Link from "next/link";
 import { Match } from "@/lib/fivb/types";
 import { isProminentMatch, matchProminenceRank } from "@/lib/fivb/prominence";
 import { Radio, ArrowRight } from "lucide-react";
+import { CountryHelper } from "@/lib/countryHelper";
+import { useCountry } from "@/lib/countryContext";
 
 interface Props {
   liveMatches: Match[];
-  polishMatchesCount: number;
+  /** Matches today for the country the reader is following. */
+  countryMatchesCount: number;
 }
 
-export function LiveTickerBar({ liveMatches, polishMatchesCount }: Props) {
+export function LiveTickerBar({ liveMatches, countryMatchesCount }: Props) {
+  const { country } = useCountry();
+  const countryName = CountryHelper.getCountryName(country);
+
   // The ticker is deliberately narrow: Beach Pro Tour and the senior European
   // Championship only. National tours would otherwise crowd out the events
   // people actually follow.
@@ -18,7 +24,7 @@ export function LiveTickerBar({ liveMatches, polishMatchesCount }: Props) {
     .filter(isProminentMatch)
     .sort((a, b) => matchProminenceRank(a) - matchProminenceRank(b));
 
-  if (tickerMatches.length === 0 && polishMatchesCount === 0) {
+  if (tickerMatches.length === 0 && countryMatchesCount === 0) {
     return null;
   }
 
@@ -33,15 +39,17 @@ export function LiveTickerBar({ liveMatches, polishMatchesCount }: Props) {
         {tickerMatches.map((m) => {
           const currentSet = m.sets[m.sets.length - 1];
           const hasScore = currentSet && (currentSet.scoreA > 0 || currentSet.scoreB > 0);
-          const isTeamAPolish = m.teamA.countryCode === "POL";
-          const isTeamBPolish = m.teamB.countryCode === "POL";
+          // Bold whichever side belongs to the country being followed, not
+          // Poland specifically.
+          const isTeamAFollowed = m.teamA.countryCode === country;
+          const isTeamBFollowed = m.teamB.countryCode === country;
           return (
             <Link
               key={m.id}
               href={`/tournaments/${m.tournamentId}`}
               className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-white border border-red-200 hover:border-red-300 shrink-0 transition-colors shadow-xs"
             >
-              <span className={`text-[10px] text-slate-800 ${isTeamAPolish ? "font-extrabold text-red-700" : "font-medium"}`}>
+              <span className={`text-[10px] text-slate-800 ${isTeamAFollowed ? "font-extrabold text-red-700" : "font-medium"}`}>
                 {m.teamA.name}
               </span>
               <span className="flex items-center gap-0.5 font-mono">
@@ -51,16 +59,16 @@ export function LiveTickerBar({ liveMatches, polishMatchesCount }: Props) {
                 </span>
                 <span className="text-[9px] font-bold text-slate-400">{m.setsWonB}</span>
               </span>
-              <span className={`text-[10px] text-slate-800 ${isTeamBPolish ? "font-extrabold text-red-700" : "font-medium"}`}>
+              <span className={`text-[10px] text-slate-800 ${isTeamBFollowed ? "font-extrabold text-red-700" : "font-medium"}`}>
                 {m.teamB.name}
               </span>
             </Link>
           );
         })}
 
-        {tickerMatches.length === 0 && polishMatchesCount > 0 && (
+        {tickerMatches.length === 0 && countryMatchesCount > 0 && (
           <span className="text-[10px] text-red-800 font-medium truncate">
-            Polish duos matches today ({polishMatchesCount} scheduled).
+            {countryName} duos matches today ({countryMatchesCount} scheduled).
           </span>
         )}
       </div>

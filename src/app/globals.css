@@ -50,7 +50,8 @@ body {
   letter-spacing: 0.02em;
 }
 
-.polish-row {
+/* The row of whichever country the reader is following, not Poland's alone. */
+.followed-row {
   background-color: #fff1f2 !important;
   border-left: 3px solid #e11d48 !important;
 }

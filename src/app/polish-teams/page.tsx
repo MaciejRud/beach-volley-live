@@ -1,57 +1,77 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { PolishTeamsSummary, Match } from "@/lib/fivb/types";
+import { CountrySummary } from "@/lib/fivb/types";
 import { MatchTable } from "@/components/MatchTable";
+import { CountryPicker } from "@/components/CountryPicker";
+import { CountryFlag } from "@/components/CountryFlag";
+import { CountryHelper } from "@/lib/countryHelper";
+import { useCountry } from "@/lib/countryContext";
 
-export default function PolishTeamsPage() {
-  const [summary, setSummary] = useState<PolishTeamsSummary | null>(null);
+/**
+ * One country's matches across the tour.
+ *
+ * Opens on Poland and stays wherever the reader puts it for the rest of the
+ * session. The URL is still /polish-teams: the page is linked from elsewhere
+ * and bookmarked, and breaking those to match a rename would cost more than
+ * the tidier path is worth.
+ */
+export default function CountryZonePage() {
+  const { country, ready } = useCountry();
+  const [summary, setSummary] = useState<CountrySummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSummary = useCallback(async (silent: boolean = false) => {
-    try {
-      if (silent) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
+  const fetchSummary = useCallback(
+    async (code: string, silent: boolean = false) => {
+      try {
+        if (!silent) setIsLoading(true);
+        setError(null);
+        const res = await fetch(`/api/country-matches?country=${encodeURIComponent(code)}`);
+        if (!res.ok) throw new Error("Failed to fetch matches for this country");
+        const json: CountrySummary = await res.json();
+        // A slow response for a country the reader has already moved on from
+        // would otherwise overwrite the one they are looking at.
+        setSummary((current) => (json.countryCode === code ? json : current));
+      } catch (err: any) {
+        setError(err?.message || "Failed to load data");
+      } finally {
+        setIsLoading(false);
       }
-      setError(null);
-      const res = await fetch("/api/polish-teams");
-      if (!res.ok) throw new Error("Failed to fetch Polish teams data");
-      const json = await res.json();
-      setSummary(json);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load data");
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
-    fetchSummary();
-    // Silent background refresh every 30 seconds -- no full reload
-    const interval = setInterval(() => fetchSummary(true), 30000);
+    // Wait for the stored choice: fetching Poland first would show the wrong
+    // country for a beat and cost a request nobody asked for.
+    if (!ready) return;
+    fetchSummary(country);
+    const interval = setInterval(() => fetchSummary(country, true), 30000);
     return () => clearInterval(interval);
-  }, [fetchSummary]);
+  }, [country, ready, fetchSummary]);
 
   const activeMatches = summary?.activeMatches || [];
   const upcomingMatches = summary?.upcomingMatches || [];
   const recentMatches = summary?.recentMatches || [];
-  const allPolishMatches = [...activeMatches, ...upcomingMatches, ...recentMatches];
+  const allMatches = [...activeMatches, ...upcomingMatches, ...recentMatches];
+  const countryName = CountryHelper.getCountryName(country);
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="bg-white px-4 py-3 rounded-lg border border-slate-200 shadow-xs">
-        <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-          Poland Zone
-        </h1>
-        <p className="text-xs text-slate-500">
-          All matches of Polish representatives in FIVB & Beach Pro Tour events
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              <CountryFlag code={country} className="shrink-0" />
+              <span className="truncate">{countryName} Zone</span>
+            </h1>
+            <p className="text-xs text-slate-500">
+              All matches of {countryName} representatives in FIVB &amp; Beach Pro Tour events
+            </p>
+          </div>
+          <CountryPicker available={summary?.availableCountries ?? []} />
+        </div>
       </div>
 
       {error && (
@@ -60,28 +80,37 @@ export default function PolishTeamsPage() {
         </div>
       )}
 
-      {/* Active Live Matches */}
       {activeMatches.length > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs font-bold text-red-600 px-1">
             <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-            <span>Polish matches currently live</span>
+            <span>{countryName} matches currently live</span>
           </div>
           <MatchTable matches={activeMatches} title="🔴 Live" showTournamentColumn />
         </div>
       )}
 
-      {/* Main Polish Matches Table */}
       {isLoading ? (
         <div className="bg-white p-10 text-center rounded-lg border border-slate-200">
-          <div className="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-          <p className="text-xs text-slate-500">Loading Polish teams matches...</p>
+          <div className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <p className="text-xs text-slate-500">Loading {countryName} matches…</p>
+        </div>
+      ) : allMatches.length === 0 ? (
+        /* An empty country is a real answer, not a failure -- most federations
+           are idle most weeks. Saying so beats an empty table. */
+        <div className="bg-white p-8 text-center rounded-lg border border-slate-200">
+          <p className="text-sm font-bold text-slate-900">
+            No {countryName} matches in the current tournaments.
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            This covers the events running, coming up and just finished. Pick another country
+            above to see who is playing.
+          </p>
         </div>
       ) : (
         <MatchTable
-          matches={allPolishMatches}
-          title="Polish duos matches (Live, Scheduled & Recent)"
-         
+          matches={allMatches}
+          title={`${countryName} duos matches (Live, Scheduled & Recent)`}
           showTournamentColumn
           groupByDay
         />

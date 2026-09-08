@@ -1,3 +1,11 @@
+/**
+ * The country the site opens on.
+ *
+ * Lives here rather than beside the React context so a server route can read it
+ * without pulling a "use client" module into the server bundle.
+ */
+export const DEFAULT_COUNTRY = "POL";
+
 export interface CountryData {
   name: string;
   flag: string;
@@ -45,6 +53,26 @@ const COUNTRY_MAP: Record<string, CountryData> = {
   HUN: { name: "Hungary", flag: "🇭🇺" },
   CRO: { name: "Croatia", flag: "🇭🇷" },
   BUL: { name: "Bulgaria", flag: "🇧🇬" },
+  BEN: { name: "Benin", flag: "🇧🇯" },
+  NIG: { name: "Niger", flag: "🇳🇪" },
+  NGR: { name: "Nigeria", flag: "🇳🇬" },
+  GHA: { name: "Ghana", flag: "🇬🇭" },
+  CIV: { name: "Côte d'Ivoire", flag: "🇨🇮" },
+  TAN: { name: "Tanzania", flag: "🇹🇿" },
+  BDI: { name: "Burundi", flag: "🇧🇮" },
+  EGY: { name: "Egypt", flag: "🇪🇬" },
+  UGA: { name: "Uganda", flag: "🇺🇬" },
+  KEN: { name: "Kenya", flag: "🇰🇪" },
+  SUD: { name: "Sudan", flag: "🇸🇩" },
+  LBR: { name: "Liberia", flag: "🇱🇷" },
+  URU: { name: "Uruguay", flag: "🇺🇾" },
+  PAR: { name: "Paraguay", flag: "🇵🇾" },
+  BOL: { name: "Bolivia", flag: "🇧🇴" },
+  COL: { name: "Colombia", flag: "🇨🇴" },
+  ECU: { name: "Ecuador", flag: "🇪🇨" },
+  VEN: { name: "Venezuela", flag: "🇻🇪" },
+  PER: { name: "Peru", flag: "🇵🇪" },
+  IRI: { name: "Iran", flag: "🇮🇷" },
   ROU: { name: "Romania", flag: "🇷🇴" },
 };
 
@@ -120,6 +148,16 @@ const CONTINENT_BY_CODE: Record<string, Continent> = {
   QAT: "Asia", JPN: "Asia", CHN: "Asia",
 
   AUS: "Oceania", NZL: "Oceania",
+
+  BEN: "Africa", NIG: "Africa", NGR: "Africa", GHA: "Africa", CIV: "Africa",
+  TAN: "Africa", BDI: "Africa", EGY: "Africa", UGA: "Africa", KEN: "Africa",
+  SUD: "Africa", LBR: "Africa",
+
+  URU: "South America", PAR: "South America", BOL: "South America",
+  COL: "South America", ECU: "South America", VEN: "South America",
+  PER: "South America",
+
+  IRI: "Asia",
 };
 
 export class CountryHelper {

@@ -1,6 +1,6 @@
 ﻿import { RequestBuilder } from "./requestBuilder";
 import { ResponseParser } from "./responseParser";
-import { Tournament, Match, TeamSeed, TeamEntry, MatchStatistics, PolishTeamsSummary, LiveCenterData } from "./types";
+import { Tournament, Match, TeamSeed, TeamEntry, MatchStatistics, CountrySummary, LiveCenterData } from "./types";
 import { isMeasured } from "./statistics";
 import { globalCache } from "../cache";
 
@@ -273,29 +273,38 @@ export class FivbClient {
   /**
    * Gets matches involving a specific country (e.g. POL)
    */
+  /**
+   * The tournaments the country zone searches: the most relevant 25.
+   *
+   * Extracted so the match scan and the country list agree on what "current"
+   * means -- two windows that drifted apart would let the picker offer a
+   * country the matches query then finds nothing for.
+   *
+   * Capped at 25 to avoid hammering the FIVB API, running and upcoming events
+   * first, then most recent.
+   */
+  static async getTournamentWindow(): Promise<Tournament[]> {
+    const tournaments = await this.getTournaments(new Date().getFullYear());
+
+    return tournaments
+      .filter((t) => t.status === "running" || t.status === "upcoming" || t.status === "finished")
+      .sort((a, b) => {
+        const rank = (status: string) =>
+          status === "running" ? 0 : status === "upcoming" ? 1 : 2;
+        return (
+          rank(a.status) - rank(b.status) ||
+          (b.startDateMain || b.startDate).localeCompare(a.startDateMain || a.startDate)
+        );
+      })
+      .slice(0, 25);
+  }
+
   static async getMatchesByCountry(countryCode: string = "POL", limit: number = 30): Promise<Match[]> {
     const cacheKey = `fivb_country_${countryCode}_${limit}`;
     return globalCache.getOrSet(
       cacheKey,
       async () => {
-        const currentYear = new Date().getFullYear();
-        const tournaments = await this.getTournaments(currentYear);
-
-        // Scan tournaments from current and previous month or active ones
-        const relevantTournaments = tournaments.filter((t) => {
-          return t.status === "running" || t.status === "upcoming" || t.status === "finished";
-        });
-
-        // Sort by start date descending (newest first), then prioritize running/upcoming
-        const sortedTournaments = relevantTournaments.sort((a, b) => {
-          const aRunning = a.status === "running" ? 0 : a.status === "upcoming" ? 1 : 2;
-          const bRunning = b.status === "running" ? 0 : b.status === "upcoming" ? 1 : 2;
-          if (aRunning !== bRunning) return aRunning - bRunning;
-          return (b.startDateMain || b.startDate).localeCompare(a.startDateMain || a.startDate);
-        });
-
-        // Limit search to top 25 most relevant tournaments to avoid hammering API
-        const topTournaments = sortedTournaments.slice(0, 25);
+        const topTournaments = await this.getTournamentWindow();
         const matchesPromises = topTournaments.map((t) => this.getMatches(t.no, t));
         const results = await Promise.all(matchesPromises);
 
@@ -325,10 +334,13 @@ export class FivbClient {
   }
 
   /**
-   * Returns structured Polish teams dashboard data
+   * One country's dashboard: their live, upcoming and recent matches.
+   *
+   * The country is a parameter rather than a constant because the zone page
+   * lets the reader change it. Poland is only the default the UI starts from.
    */
-  static async getPolishTeamsSummary(): Promise<PolishTeamsSummary> {
-    const matches = await this.getMatchesByCountry("POL", 40);
+  static async getCountrySummary(countryCode: string): Promise<CountrySummary> {
+    const matches = await this.getMatchesByCountry(countryCode, 40);
 
     const activeMatches = matches.filter((m) => m.status === "live" || m.status === "break");
     const upcomingMatches = matches.filter((m) => m.status === "scheduled");
@@ -342,12 +354,51 @@ export class FivbClient {
     const allTournaments = await this.getTournaments(new Date().getFullYear());
     const tournamentsInvolved = allTournaments.filter((t) => tournamentIds.has(t.no));
 
+    const availableCountries = await this.getCountriesInWindow();
+
     return {
+      countryCode,
       activeMatches,
       upcomingMatches,
       recentMatches,
       tournamentsInvolved,
+      availableCountries,
       lastUpdated: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Which countries have matches in the window the zone scans, and how many.
+   *
+   * Reads the same per-tournament match lists getMatchesByCountry does, so on
+   * a warm cache this costs nothing beyond the counting -- and it is the only
+   * honest way to build the picker: a hardcoded country list would offer
+   * countries that open onto an empty page, which is indistinguishable from
+   * the app being broken.
+   */
+  static async getCountriesInWindow(): Promise<{ code: string; matches: number }[]> {
+    return globalCache.getOrSet(
+      "fivb_countries_in_window",
+      async () => {
+        const tournaments = await this.getTournamentWindow();
+        const lists = await Promise.all(tournaments.map((t) => this.getMatches(t.no, t)));
+
+        const counts = new Map<string, number>();
+        for (const list of lists) {
+          for (const m of list) {
+            // A match counts once for each side, and once only when a pair
+            // somehow shares a code with its opponent.
+            for (const code of new Set([m.teamA.countryCode, m.teamB.countryCode])) {
+              if (code) counts.set(code, (counts.get(code) ?? 0) + 1);
+            }
+          }
+        }
+
+        return [...counts.entries()]
+          .map(([code, matches]) => ({ code, matches }))
+          .sort((a, b) => b.matches - a.matches || a.code.localeCompare(b.code, "en"));
+      },
+      60
+    );
   }
 }

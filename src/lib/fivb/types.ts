@@ -226,14 +226,29 @@ export interface Match {
   sets: SetScore[];
   winner?: "A" | "B" | null;
   duration?: string;
-  isPolishMatch?: boolean;
 }
 
-export interface PolishTeamsSummary {
+/**
+ * One country's matches across the tour, for the country zone.
+ *
+ * Not tied to any particular country: which one it describes is decided by the
+ * caller, and the same shape serves whichever the reader has selected.
+ */
+export interface CountrySummary {
+  /** The country these matches belong to, so a response identifies itself. */
+  countryCode: string;
   activeMatches: Match[];
   upcomingMatches: Match[];
   recentMatches: Match[];
   tournamentsInvolved: Tournament[];
+  /**
+   * Countries with matches in the scanned window, most matches first.
+   *
+   * Comes from the same scan the matches do, so offering the picker a list of
+   * live options costs nothing extra -- and never offers a country that would
+   * open onto an empty page.
+   */
+  availableCountries: { code: string; matches: number }[];
   lastUpdated: string;
 }
 

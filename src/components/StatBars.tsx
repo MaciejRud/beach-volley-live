@@ -236,6 +236,7 @@ export function DistributionRow({
   format,
   higherIsBetter,
   showRank = true,
+  compact = false,
 }: {
   label: string;
   note: string;
@@ -244,6 +245,15 @@ export function DistributionRow({
   higherIsBetter: boolean;
   /** The guessing game hides the placing: it would say more than the shape does. */
   showRank?: boolean;
+  /**
+   * Squeezes the row so six of them fit a phone screen at once.
+   *
+   * Only the game asks for this, and only because comparing six shapes is the
+   * whole activity there -- a set you have to scroll through is not a set you
+   * can read against itself. The note goes first: at 160px wide it wraps to
+   * three lines and costs more height than the chart it explains.
+   */
+  compact?: boolean;
 }) {
   const { value, percentile, rank, min, max, bins } = distribution;
 
@@ -263,7 +273,9 @@ export function DistributionRow({
   return (
     <div>
       <div className="flex items-baseline gap-x-2">
-        <span className="text-[11px] font-medium text-slate-700">{label}</span>
+        <span className={`font-medium text-slate-700 ${compact ? "text-[10px] sm:text-[11px]" : "text-[11px]"}`}>
+          {label}
+        </span>
         {showRank && (
           <span className="ml-auto font-mono text-[10px] whitespace-nowrap text-slate-500">
             {rank ? (
@@ -278,14 +290,16 @@ export function DistributionRow({
       </div>
       {/* Its own line rather than beside the label: in a half-width column the
           two together wrap into a ragged block. */}
-      <div className="text-[10px] leading-tight text-slate-400">{note}</div>
+      <div className={`text-[10px] leading-tight text-slate-400 ${compact ? "hidden sm:block" : ""}`}>
+        {note}
+      </div>
 
       {/* Side padding so the chip can hang past either end of the track
           without being clipped when a player is the field's best or worst. */}
-      <div className="px-6 pt-1.5">
+      <div className={compact ? "px-3 sm:px-6 pt-1" : "px-6 pt-1.5"}>
         <div className="relative">
-          <div className="h-[15px]" />
-          <div className="flex h-[44px] items-end gap-px">
+          <div className={compact ? "h-[14px]" : "h-[15px]"} />
+          <div className={`flex items-end gap-px ${compact ? "h-[30px] sm:h-[44px]" : "h-[44px]"}`}>
             {bins.map((count, index) => (
               <div
                 key={index}
@@ -309,7 +323,9 @@ export function DistributionRow({
             <>
               <div
                 style={{ left: `${position}%` }}
-                className={`absolute top-[15px] h-[44px] w-[2px] -translate-x-1/2 ${accent}`}
+                className={`absolute w-[2px] -translate-x-1/2 ${accent} ${
+                  compact ? "top-[14px] h-[30px] sm:top-[15px] sm:h-[44px]" : "top-[15px] h-[44px]"
+                }`}
               />
               <div
                 style={{ left: `${position}%` }}
@@ -326,7 +342,7 @@ export function DistributionRow({
           )}
         </div>
 
-        <div className="mt-1 flex justify-between font-mono text-[10px] text-slate-400">
+        <div className={`flex justify-between font-mono text-slate-400 ${compact ? "mt-0.5 text-[9px] sm:text-[10px]" : "mt-1 text-[10px]"}`}>
           <span>{format(min)}</span>
           <span>{format(max)}</span>
         </div>

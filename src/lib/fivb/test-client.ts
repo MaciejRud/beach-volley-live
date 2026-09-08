@@ -20,8 +20,8 @@ async function main() {
     }
   }
 
-  console.log("\n3. Testing Polish teams fetch (country=POL)...");
-  const polSummary = await FivbClient.getPolishTeamsSummary();
+  console.log("\n3. Testing country summary fetch (country=POL)...");
+  const polSummary = await FivbClient.getCountrySummary("POL");
   console.log(`Active POL matches: ${polSummary.activeMatches.length}`);
   console.log(`Upcoming POL matches: ${polSummary.upcomingMatches.length}`);
   console.log(`Recent POL matches: ${polSummary.recentMatches.length}`);

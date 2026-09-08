@@ -3,10 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Calendar, Flag, Activity, Users, HelpCircle } from "lucide-react";
+import { CountryHelper } from "@/lib/countryHelper";
+import { useCountry } from "@/lib/countryContext";
 
 const navItems = [
   { href: "/", label: "Tournament Calendar", shortLabel: "Calendar", icon: Calendar, accent: "" },
-  { href: "/polish-teams", label: "Poland Zone", shortLabel: "Poland", icon: Flag, accent: "text-red-500" },
+  // Label is filled in from the selected country: the zone follows whoever the
+  // reader is watching, and a nav that still said "Poland" over a Belgium page
+  // would read as a broken link rather than a renamed one.
+  { href: "/polish-teams", label: "", shortLabel: "", icon: Flag, accent: "text-red-500" },
   { href: "/live", label: "Live Matches", shortLabel: "Live", icon: Activity, accent: "text-emerald-500" },
   { href: "/players", label: "Players", shortLabel: "Players", icon: Users, accent: "text-sky-500" },
   { href: "/play", label: "Guess the Player", shortLabel: "Guess", icon: HelpCircle, accent: "text-amber-500" },
@@ -14,6 +19,20 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const { country } = useCountry();
+
+  // The full name on desktop, the federation code on a phone: at 64px a
+  // column has no room for "Cote d'Ivoire", and the code is what the
+  // scoreboards use anyway.
+  const items = navItems.map((item) =>
+    item.href === "/polish-teams"
+      ? {
+          ...item,
+          label: `${CountryHelper.getCountryName(country)} Zone`,
+          shortLabel: country,
+        }
+      : item
+  );
 
   return (
     <>
@@ -39,7 +58,7 @@ export function Navbar() {
 
             {/* Desktop navigation -- on mobile the bottom tab bar takes over */}
             <nav className="hidden md:flex items-center gap-1.5">
-              {navItems.map((item) => {
+              {items.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
 
@@ -77,8 +96,8 @@ export function Navbar() {
         className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 pb-[env(safe-area-inset-bottom)]"
         aria-label="Main"
       >
-        <div className="grid" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
-          {navItems.map((item) => {
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+          {items.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
 

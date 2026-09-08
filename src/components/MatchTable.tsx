@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Match } from "@/lib/fivb/types";
 import { CountryHelper } from "@/lib/countryHelper";
+import { useCountry } from "@/lib/countryContext";
 import { CountryFlag } from "./CountryFlag";
 import { MatchTime } from "./MatchTime";
 import { formatDateHeading, groupByDate } from "@/lib/dateFormatter";
@@ -48,6 +49,7 @@ export function MatchTable({
   groupByDay = false,
   hidePhase = false,
 }: Props) {
+  const { country } = useCountry();
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -165,14 +167,14 @@ export function MatchTable({
 
   const renderCard = (m: Match) => {
     const isLive = m.status === "live" || m.status === "break";
-    const hasPolish = m.teamA.countryCode === "POL" || m.teamB.countryCode === "POL";
+    const isFollowed = m.teamA.countryCode === country || m.teamB.countryCode === country;
 
     return (
       <Link
         key={m.id}
         href={matchHref(m)}
         className={`block px-3 py-2.5 transition-colors ${
-          hasPolish ? "polish-row" : ""
+          isFollowed ? "followed-row" : ""
         } ${isLive ? "bg-red-50/40 hover:bg-red-50" : "hover:bg-slate-50"}`}
       >
         {/* One compact row: time and court on the left, teams in the middle,
@@ -250,9 +252,7 @@ export function MatchTable({
   };
 
   const renderRow = (m: Match) => {
-    const isTeamAPolish = m.teamA.countryCode === "POL";
-    const isTeamBPolish = m.teamB.countryCode === "POL";
-    const hasPolish = isTeamAPolish || isTeamBPolish;
+    const isFollowed = m.teamA.countryCode === country || m.teamB.countryCode === country;
     const isLive = m.status === "live" || m.status === "break";
     const isFinished = m.status === "finished";
 
@@ -261,7 +261,7 @@ export function MatchTable({
         key={m.id}
         onClick={() => router.push(matchHref(m))}
         className={`hover:bg-slate-50 transition-colors cursor-pointer ${
-          hasPolish ? "polish-row" : ""
+          isFollowed ? "followed-row" : ""
         } ${isLive ? "bg-red-50/50" : ""}`}
       >
         {/* Match number + court. The number is a real link so the row is

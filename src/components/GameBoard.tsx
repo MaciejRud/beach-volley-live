@@ -200,13 +200,25 @@ export function GameBoard({ data }: { data: GameData }) {
         )}
       </div>
 
-      <p className="text-[11px] leading-relaxed text-slate-500">
-        Six statistics from one player on the Beach Pro Tour, drawn against everyone they are
-        measured with. The pool is the 50 men and 50 women with the most Elite16 matches from
-        2022 to 2026; the figures cover their whole measured record, Challenge and World
-        Championships included. Switch period to see how the shape moves year to year — every
-        guess is compared over the period you are looking at.
-      </p>
+      {/* Folded away: it is read once and then costs a third of a phone screen
+          on every round after that. Collapsed everywhere rather than by
+          breakpoint, because <details open> is an attribute and cannot be set
+          from a media query without scripting it. */}
+      <details className="group text-[11px] leading-relaxed text-slate-500">
+        <summary className="cursor-pointer list-none font-bold text-slate-600 marker:content-none hover:text-slate-900">
+          How it works
+          <span className="ml-1 font-normal text-slate-400 group-open:hidden">
+            — six statistics, six guesses
+          </span>
+        </summary>
+        <p className="mt-1.5">
+          Six statistics from one player on the Beach Pro Tour, drawn against everyone they are
+          measured with. The pool is the 50 men and 50 women with the most Elite16 matches from
+          2022 to 2026; the figures cover their whole measured record, Challenge and World
+          Championships included. Switch period to see how the shape moves year to year — every
+          guess is compared over the period you are looking at.
+        </p>
+      </details>
 
       {/* Period picker: the same control as a player page, and the main way of
           working the answer out rather than a decoration. */}
@@ -245,7 +257,10 @@ export function GameBoard({ data }: { data: GameData }) {
           </p>
         ) : (
           <div className="p-3">
-            <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            {/* Two columns even on a phone: reading the six shapes against
+                each other is the whole activity, and a set you have to scroll
+                through cannot be compared. */}
+            <div className="grid grid-cols-2 gap-x-2 gap-y-2 sm:gap-x-6 sm:gap-y-4">
               {METRIC_DISPLAY.map((metric, index) => {
                 const field = fields[index];
                 const value = answerValues?.[index] ?? null;
@@ -269,6 +284,7 @@ export function GameBoard({ data }: { data: GameData }) {
                     format={metric.format}
                     higherIsBetter={metric.higherIsBetter}
                     showRank={false}
+                    compact
                   />
                 );
               })}

@@ -3,6 +3,7 @@
 import { Match } from "@/lib/fivb/types";
 import { poolStandings } from "@/lib/fivb/standings";
 import { CountryFlag } from "./CountryFlag";
+import { useCountry } from "@/lib/countryContext";
 
 interface Props {
   matches: Match[];
@@ -20,6 +21,7 @@ interface Props {
  * Renders bare, without a card of its own: the bar that opens it is the card.
  */
 export function PoolStandings({ matches }: Props) {
+  const { country } = useCountry();
   const table = poolStandings(matches);
   if (table.length === 0) return null;
 
@@ -57,7 +59,7 @@ export function PoolStandings({ matches }: Props) {
           </thead>
           <tbody className="divide-y divide-slate-200 font-medium">
             {table.map((row) => (
-              <tr key={row.teamNo} className={row.countryCode === "POL" ? "polish-row" : ""}>
+              <tr key={row.teamNo} className={row.countryCode === country ? "followed-row" : ""}>
                 <td className="py-1 px-2.5 font-mono text-[10px] text-slate-400">{row.rank}</td>
                 <td className="py-1 px-2">
                   <span className="flex items-center gap-1.5 min-w-0">
