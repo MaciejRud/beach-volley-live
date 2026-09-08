@@ -50,14 +50,58 @@ export interface MetricRank {
   outOf: number;
 }
 
-export interface SeasonRow {
-  season: number;
-  totals: StatTotals;
-  /** Percentile per metric, 0-100, or null where the sample is too small to rank. */
-  percentiles: Partial<Record<PercentileMetric, number | null>>;
-  /** Placing per metric -- 1st is best, which for error rates means the lowest. */
-  ranks: Partial<Record<PercentileMetric, MetricRank | null>>;
+/** How many bars the field's distribution is drawn with. */
+export const HISTOGRAM_BINS = 22;
+
+/**
+ * One metric set against its field, as the distribution view draws it.
+ *
+ * The bins are the field's real shape, not a curve fitted to it. That matters:
+ * several of these metrics are not bell-shaped. Block points per match is
+ * openly bimodal -- in a pair one player blocks and the other defends, so
+ * roughly 40% of the field sits at almost zero blocks and a second group sits
+ * around four. A fitted normal curve would peak between the two, where hardly
+ * anybody is, and would quietly turn a role into a weakness.
+ */
+export interface MetricDistribution {
+  metric: PercentileMetric;
+  /** The player's own figure; null when the metric has no denominator. */
+  value: number | null;
+  percentile: number | null;
+  rank: MetricRank | null;
+  /** Lowest and highest figure in the field -- the ends of the bin range. */
+  min: number;
+  max: number;
+  /** How many players fall in each equal-width bin between min and max. */
+  bins: number[];
 }
+
+/** One selectable period: the whole archive, or a single season. */
+export interface ScopeRow {
+  /** CAREER_SCOPE, or the season as a string. */
+  key: string;
+  label: string;
+  totals: StatTotals;
+  /** How many players this period's field holds, whether or not it is ranked. */
+  fieldSize: number;
+  /** Measured matches this period needs before a standing is drawn. */
+  minMatches: number;
+  /** Empty when the player is under `minMatches` for this period. */
+  distributions: MetricDistribution[];
+  /**
+   * Whether this period's block counters carry a real outcome split.
+   *
+   * In 2022 the feed reported almost nothing but successful blocks -- across
+   * the whole field, 95% of blockTotal is blockPoint, against roughly 30% in
+   * every later season -- so a won / continues / error bar for that season is
+   * all green and says nothing. Decided per period from the field as a whole,
+   * because per player the two regimes overlap: a 2022 player can reach 45%
+   * non-point blocks and a 2023 one can sit as low as 18%.
+   */
+  blockMeasured: boolean;
+}
+
+export const CAREER_SCOPE = "career";
 
 export interface TournamentRow {
   tournamentNo: string;
@@ -100,8 +144,8 @@ export interface PlayerProfile {
   gender: Gender;
   career: StatTotals;
   summary: CareerSummary;
-  /** Newest season first. */
-  seasons: SeasonRow[];
+  /** The whole archive first, then one entry per season, newest first. */
+  scopes: ScopeRow[];
   /** Newest tournament first. */
   tournaments: TournamentRow[];
 }
@@ -140,24 +184,76 @@ function rankOf(
 /** Metrics where a lower number is the better result. */
 const LOWER_IS_BETTER = new Set<PercentileMetric>(["receptionFaultRate"]);
 
+/** One metric's field: the values themselves, plus the histogram drawn from them. */
+interface FieldStats {
+  values: number[];
+  min: number;
+  max: number;
+  bins: number[];
+}
+
+/** Everything one period's field says: per-metric shape, plus what it can be trusted on. */
+interface FieldSummary {
+  metrics: Partial<Record<PercentileMetric, FieldStats>>;
+  blockMeasured: boolean;
+}
+
 /**
- * Metric values for every ranked player in a season, grouped by gender -- men
- * and women are not a single population.
+ * Least share of a field's block actions that must be something other than a
+ * point before the block split is treated as measured.
+ *
+ * Sits far from both regimes -- 2022 lands at 5%, every later season above
+ * 65% -- so it separates them without being tuned to either.
+ */
+const BLOCK_DECOMPOSED_MIN_SHARE = 0.25;
+
+/**
+ * Bins a field into equal-width bars between its lowest and highest value.
+ *
+ * A field of one has no shape to draw and no ranking to give, so it is dropped
+ * rather than rendered as a single full-height bar.
+ */
+function summarise(values: number[]): FieldStats | null {
+  if (values.length < 2) return null;
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min;
+  const bins = new Array<number>(HISTOGRAM_BINS).fill(0);
+
+  for (const value of values) {
+    // The highest value lands exactly on the upper edge; it belongs in the last
+    // bin rather than one past the end of the array.
+    const index =
+      span > 0
+        ? Math.min(HISTOGRAM_BINS - 1, Math.floor(((value - min) / span) * HISTOGRAM_BINS))
+        : 0;
+    bins[index] += 1;
+  }
+
+  return { values, min, max, bins };
+}
+
+/**
+ * Metric values for every player the standing is measured against, by period
+ * and gender -- men and women are not a single population.
  *
  * The field is the players the section actually lists: someone with two
  * qualification appearances across their whole career is not a peer to measure
  * a tour regular against, and counting them only inflates everyone's placing.
+ *
+ * Career carries no threshold of its own. Being in the form file already means
+ * ten measured matches, which is exactly the bar for having a page at all; a
+ * season needs PERCENTILE_MIN_MATCHES on top of that, because a season is a
+ * short enough window for three matches to describe luck rather than form.
  */
-const populationCache = new Map<string, Partial<Record<PercentileMetric, number[]>>>();
+const fieldCache = new Map<string, FieldSummary>();
 
-async function seasonPopulations(
-  season: number,
-  gender: Gender
-): Promise<Partial<Record<PercentileMetric, number[]>>> {
-  // Every player page asks for the same five seasons, and the files do not
-  // change while the process runs -- so scan them once per season.
-  const cacheKey = `${season}:${gender}`;
-  const cached = populationCache.get(cacheKey);
+async function fieldFor(scopeKey: string, gender: Gender): Promise<FieldSummary> {
+  // Every player page asks for the same handful of periods, and the files do
+  // not change while the process runs -- so scan them once per period.
+  const cacheKey = `${scopeKey}:${gender}`;
+  const cached = fieldCache.get(cacheKey);
   if (cached) return cached;
 
   const [aggregates, directory, form] = await Promise.all([
@@ -165,30 +261,102 @@ async function seasonPopulations(
     loadDirectory(),
     loadForm(),
   ]);
-  if (!aggregates) return {};
+  if (!aggregates) return { metrics: {}, blockMeasured: true };
 
-  const populations: Partial<Record<PercentileMetric, number[]>> = {};
-  for (const metric of PERCENTILE_METRICS) populations[metric] = [];
+  const minMatches = scopeKey === CAREER_SCOPE ? 0 : PERCENTILE_MIN_MATCHES;
+  const raw: Record<string, number[]> = {};
+  for (const metric of PERCENTILE_METRICS) raw[metric] = [];
+
+  // Block actions over the whole field, to judge whether the feed split them
+  // this period or only counted the ones that scored.
+  let blockTotal = 0;
+  let blockOther = 0;
 
   for (const [playerNo, entry] of Object.entries(aggregates.players)) {
     if ((directory?.[playerNo]?.gender ?? entry.gender) !== gender) continue;
     if (form && !form.players[playerNo]) continue;
 
-    const values = entry.seasons[String(season)];
-    if (!values) continue;
+    const totals = emptyTotals();
+    if (scopeKey === CAREER_SCOPE) {
+      for (const values of Object.values(entry.seasons)) {
+        addTotals(totals, decodeTotals(values, aggregates.columns));
+      }
+    } else {
+      const values = entry.seasons[scopeKey];
+      if (!values) continue;
+      addTotals(totals, decodeTotals(values, aggregates.columns));
+    }
+    if (totals.matches < minMatches) continue;
 
-    const totals = decodeTotals(values, aggregates.columns);
-    if (totals.matches < PERCENTILE_MIN_MATCHES) continue;
+    blockTotal += totals.blockTotal;
+    blockOther += totals.blockFault + totals.blockContinue;
 
     const metrics = metricValues(totals);
     for (const metric of PERCENTILE_METRICS) {
-      const v = metrics[metric];
-      if (v !== null) populations[metric]!.push(v);
+      const value = metrics[metric];
+      if (value !== null) raw[metric].push(value);
     }
   }
 
-  populationCache.set(cacheKey, populations);
-  return populations;
+  const metrics: Partial<Record<PercentileMetric, FieldStats>> = {};
+  for (const metric of PERCENTILE_METRICS) {
+    const stats = summarise(raw[metric]);
+    if (stats) metrics[metric] = stats;
+  }
+
+  const summary: FieldSummary = {
+    metrics,
+    // A field with no blocks at all has nothing to disprove, so it is left
+    // trusted rather than reported as a feed problem.
+    blockMeasured: blockTotal === 0 || blockOther / blockTotal >= BLOCK_DECOMPOSED_MIN_SHARE,
+  };
+
+  fieldCache.set(cacheKey, summary);
+  return summary;
+}
+
+/** Assembles one selectable period: the player's totals against that field. */
+async function buildScope(
+  key: string,
+  label: string,
+  totals: StatTotals,
+  gender: Gender
+): Promise<ScopeRow> {
+  const minMatches = key === CAREER_SCOPE ? 0 : PERCENTILE_MIN_MATCHES;
+  const field = await fieldFor(key, gender);
+  const { blockMeasured } = field;
+
+  // Points per match has a denominator for everyone in the field, so its
+  // population is the field itself. Metrics needing a skill the player never
+  // performed rank against fewer, and each carries its own `outOf`.
+  const fieldSize = field.metrics.pointsPerMatch?.values.length ?? 0;
+
+  // Below the threshold the numbers are still shown, but not a placing: with
+  // three matches played, a placing would describe luck rather than form.
+  if (totals.matches < minMatches) {
+    return { key, label, totals, fieldSize, minMatches, distributions: [], blockMeasured };
+  }
+
+  const metrics = metricValues(totals);
+  const distributions: MetricDistribution[] = [];
+
+  for (const metric of PERCENTILE_METRICS) {
+    const stats = field.metrics[metric];
+    if (!stats) continue;
+
+    const value = metrics[metric];
+    distributions.push({
+      metric,
+      value,
+      percentile: value === null ? null : percentileOf(value, stats.values),
+      rank: value === null ? null : rankOf(value, stats.values, !LOWER_IS_BETTER.has(metric)),
+      min: stats.min,
+      max: stats.max,
+      bins: stats.bins,
+    });
+  }
+
+  return { key, label, totals, fieldSize, minMatches, distributions, blockMeasured };
 }
 
 export async function loadPlayerProfile(playerNo: string): Promise<PlayerProfile | null> {
@@ -216,30 +384,22 @@ export async function loadPlayerProfile(playerNo: string): Promise<PlayerProfile
     .map(Number)
     .sort((a, b) => b - a);
 
-  const seasons: SeasonRow[] = [];
-  for (const season of seasonNumbers) {
+  const seasonTotals = seasonNumbers.map((season) => {
     const totals = decodeTotals(entry.seasons[String(season)], aggregates.columns);
     addTotals(career, totals);
+    return { season, totals };
+  });
 
-    const populations = await seasonPopulations(season, gender);
-    const metrics = metricValues(totals);
-    const percentiles: SeasonRow["percentiles"] = {};
-    const ranks: SeasonRow["ranks"] = {};
-
-    // A player below the threshold is shown their numbers but not a standing:
-    // with three matches played, a placing would describe luck, not form.
-    if (totals.matches >= PERCENTILE_MIN_MATCHES) {
-      for (const metric of PERCENTILE_METRICS) {
-        const value = metrics[metric];
-        const population = populations[metric] ?? [];
-        percentiles[metric] = value === null ? null : percentileOf(value, population);
-        ranks[metric] =
-          value === null ? null : rankOf(value, population, !LOWER_IS_BETTER.has(metric));
-      }
-    }
-
-    seasons.push({ season, totals, percentiles, ranks });
-  }
+  // Career leads, because it is the period every player has and the one the
+  // page opens on; seasons follow newest first, matching the table below them.
+  const scopes: ScopeRow[] = [
+    await buildScope(CAREER_SCOPE, "All seasons", career, gender),
+    ...(await Promise.all(
+      seasonTotals.map(({ season, totals }) =>
+        buildScope(String(season), String(season), totals, gender)
+      )
+    )),
+  ];
 
   const tournaments: TournamentRow[] = (form?.players[playerNo] ?? []).map((t) => ({
     tournamentNo: t.tournamentNo,
@@ -280,7 +440,7 @@ export async function loadPlayerProfile(playerNo: string): Promise<PlayerProfile
     gender,
     career,
     summary,
-    seasons,
+    scopes,
     tournaments,
   };
 }

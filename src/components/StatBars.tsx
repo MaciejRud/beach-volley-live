@@ -1,4 +1,6 @@
 import { PlayerStatLine } from "@/lib/fivb/types";
+import type { StatTotals } from "@/lib/stats/aggregate";
+import type { MetricDistribution } from "@/lib/stats/playerProfile";
 
 /**
  * Bar primitives for the statistics views.
@@ -128,9 +130,12 @@ export function PointOriginBar({ origin }: { origin: PointOrigin }) {
  * Each skill's total decomposes exactly into won / rally continues / error
  * (verified on 192 of 192 rows).
  *
- * The first segment is a point only for attack, block and serve. A dig never
- * scores -- there it means the ball was dug cleanly -- and reception has no
- * positive grade at all in this feed, hence the null.
+ * Defence is deliberately absent. Its first segment would be "clean dig",
+ * which a reader cannot tell apart from "rally continues" -- both mean the
+ * ball stayed up, and neither scores. The dig counters are still reported as
+ * plain numbers in the match table, where they read as counts rather than as
+ * an outcome. Reception stays: it has no positive grade in this feed at all,
+ * hence the null, so its bar is honestly an error rate.
  */
 const RESOLUTION_DEFS: {
   label: string;
@@ -143,21 +148,36 @@ const RESOLUTION_DEFS: {
   { label: "Block", total: "blockTotal", won: "blockPoint", lost: "blockFault", wonLabel: "point" },
   { label: "Serve", total: "serveTotal", won: "servePoint", lost: "serveFault", wonLabel: "ace" },
   { label: "Reception", total: "receptionTotal", won: null, lost: "receptionFault", wonLabel: "" },
-  { label: "Defence", total: "digTotal", won: "digExcellent", lost: "digFault", wonLabel: "clean dig" },
 ];
 
 export const RESOLUTION_LEGEND = [
-  { className: "bg-emerald-600", label: "point (attack, block, ace) or clean dig" },
+  { className: "bg-emerald-600", label: "point (attack, block, ace)" },
   { className: "bg-slate-300", label: "rally continues" },
   { className: "bg-red-500", label: "error" },
 ];
 
-export function ResolutionBars({ line }: { line: PlayerStatLine | undefined }) {
+/**
+ * `blockMeasured` is false for a period whose feed counted only the blocks that
+ * scored. The bar is dropped rather than drawn all green: a split where one
+ * segment is the whole track is not a decomposition, it is a total wearing the
+ * wrong shape, and a reader has no way to tell that from a perfect blocker.
+ */
+export function ResolutionBars({
+  line,
+  blockMeasured = true,
+}: {
+  line: PlayerStatLine | undefined;
+  blockMeasured?: boolean;
+}) {
   if (!line) return <p className="text-[11px] text-slate-400">No data.</p>;
+
+  const defs = blockMeasured
+    ? RESOLUTION_DEFS
+    : RESOLUTION_DEFS.filter((def) => def.label !== "Block");
 
   return (
     <div>
-      {RESOLUTION_DEFS.map((def) => {
+      {defs.map((def) => {
         const total = (line[def.total] as number) ?? 0;
         const won = def.won ? ((line[def.won] as number) ?? 0) : 0;
         const lost = (line[def.lost] as number) ?? 0;
@@ -189,52 +209,123 @@ export function ResolutionBars({ line }: { line: PlayerStatLine | undefined }) {
 /* ---------------- Standing against the field ---------------- */
 
 /**
- * One metric as a 0-100 track with the player's position marked.
- *
- * The dot carries the percentile itself, so the bar can be read without a
- * legend. Quartile ticks give the eye something to measure against.
+ * Totals wear the shape of a match line, so the same resolution bars can render
+ * a season or a whole career. Only the counters matter -- the identity fields
+ * are filled to satisfy the type and are never read.
  */
-export function PercentileBar({
+export function totalsAsLine(totals: StatTotals): PlayerStatLine {
+  return { ...totals, playerNo: "" } as unknown as PlayerStatLine;
+}
+
+/**
+ * One metric drawn as the field's own distribution, with the player marked on it.
+ *
+ * The bars are real counts, not a fitted curve. Half of these metrics are not
+ * bell-shaped -- block points per match has two separate humps, because in a
+ * pair one player blocks and the other defends -- and a smooth curve would put
+ * its peak in the gap between them, where hardly anybody is.
+ *
+ * The chip carries the player's actual figure rather than a percentile, so the
+ * number that gets read is the one that means something on its own; the
+ * percentile survives only in the tooltip.
+ */
+export function DistributionRow({
   label,
-  value,
-  percentile,
+  note,
+  distribution,
+  format,
   higherIsBetter,
 }: {
   label: string;
-  value: string;
-  percentile: number | null;
+  note: string;
+  distribution: MetricDistribution;
+  format: (value: number) => string;
   higherIsBetter: boolean;
 }) {
+  const { value, percentile, rank, min, max, bins } = distribution;
+
   const strong = percentile !== null && (higherIsBetter ? percentile >= 67 : percentile <= 33);
   const weak = percentile !== null && (higherIsBetter ? percentile <= 33 : percentile >= 67);
-  const dotColour = strong ? "bg-emerald-600" : weak ? "bg-red-500" : "bg-slate-600";
+  const accent = strong ? "bg-emerald-600" : weak ? "bg-red-500" : "bg-slate-700";
+
+  const span = max - min;
+  // A field where everyone posted the same figure has no width to place anyone
+  // along, so the marker sits in the middle rather than at an arbitrary end.
+  const share = value === null ? null : span > 0 ? (value - min) / span : 0.5;
+  const position = share === null ? null : Math.min(1, Math.max(0, share)) * 100;
+  const playerBin =
+    share === null ? -1 : Math.min(bins.length - 1, Math.floor(Math.max(0, share) * bins.length));
+  const tallest = Math.max(1, ...bins);
 
   return (
-    <div className="grid grid-cols-[104px_1fr_58px] sm:grid-cols-[150px_1fr_66px] gap-2.5 items-center">
-      <span className="text-[11px] text-slate-600 leading-tight">{label}</span>
+    <div>
+      <div className="flex items-baseline gap-x-2">
+        <span className="text-[11px] font-medium text-slate-700">{label}</span>
+        <span className="ml-auto font-mono text-[10px] whitespace-nowrap text-slate-500">
+          {rank ? (
+            <>
+              #{rank.place} <span className="text-slate-300">of {rank.outOf}</span>
+            </>
+          ) : (
+            <span className="text-slate-300">not ranked</span>
+          )}
+        </span>
+      </div>
+      {/* Its own line rather than beside the label: in a half-width column the
+          two together wrap into a ragged block. */}
+      <div className="text-[10px] leading-tight text-slate-400">{note}</div>
 
-      <span className="relative h-[19px] rounded-sm bg-slate-200">
-        {[20, 40, 60, 80].map((tick) => (
-          <span
-            key={tick}
-            style={{ left: `${tick}%` }}
-            className="absolute top-0 bottom-0 w-px bg-white/60"
-          />
-        ))}
-        {percentile !== null && (
-          <span
-            style={{ left: `${percentile}%` }}
-            title={`Higher than ${percentile.toFixed(0)}% of the field`}
-            className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-[19px] h-[19px] rounded-full border-2 border-white flex items-center justify-center font-mono text-[9px] font-bold text-white ${dotColour}`}
-          >
-            {percentile.toFixed(0)}
-          </span>
-        )}
-      </span>
+      {/* Side padding so the chip can hang past either end of the track
+          without being clipped when a player is the field's best or worst. */}
+      <div className="px-6 pt-1.5">
+        <div className="relative">
+          <div className="h-[15px]" />
+          <div className="flex h-[44px] items-end gap-px">
+            {bins.map((count, index) => (
+              <div
+                key={index}
+                className={`flex-1 rounded-t-[1px] ${
+                  index === playerBin ? "bg-slate-400" : "bg-slate-200"
+                }`}
+                // Heights stay strictly proportional to the counts, so one
+                // crowded bin really does dwarf the rest -- which is the shape
+                // of the data. The tooltip carries the numbers a squashed bar
+                // can no longer show.
+                title={`${count} ${count === 1 ? "player" : "players"} between ${format(
+                  min + (span * index) / bins.length
+                )} and ${format(min + (span * (index + 1)) / bins.length)}`}
+                style={{ height: count > 0 ? `${Math.max(5, (count / tallest) * 100)}%` : "0%" }}
+              />
+            ))}
+          </div>
+          <div className="h-px bg-slate-300" />
 
-      <span className="text-right font-mono text-xs font-bold text-slate-900 tabular-nums">
-        {value}
-      </span>
+          {position !== null && value !== null && (
+            <>
+              <div
+                style={{ left: `${position}%` }}
+                className={`absolute top-[15px] h-[44px] w-[2px] -translate-x-1/2 ${accent}`}
+              />
+              <div
+                style={{ left: `${position}%` }}
+                title={
+                  percentile === null
+                    ? undefined
+                    : `Higher than ${percentile.toFixed(0)}% of the field`
+                }
+                className={`absolute top-0 -translate-x-1/2 rounded px-1.5 py-px font-mono text-[10px] font-bold whitespace-nowrap text-white ${accent}`}
+              >
+                {format(value)}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mt-1 flex justify-between font-mono text-[10px] text-slate-400">
+          <span>{format(min)}</span>
+          <span>{format(max)}</span>
+        </div>
+      </div>
     </div>
   );
 }

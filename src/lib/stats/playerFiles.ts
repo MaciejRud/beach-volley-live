@@ -95,13 +95,15 @@ export interface PlayerFormFile {
 }
 
 /**
- * Percentile rank of a player among their peers, per season and metric.
+ * Measured matches a player needs in a season before that season is ranked.
  *
  * Comparing a player against the whole field is only meaningful with a real
- * sample behind both sides, so ranks are computed over players who reached the
- * match threshold in that season and gender.
+ * sample behind both sides, so ranks are computed over players who reached this
+ * threshold in that season and gender. It applies to seasons only: the career
+ * period is ranked over everyone the section lists, which already means ten
+ * measured matches (MIN_CAREER_MATCHES in scripts/build-player-data.ts).
  */
-export const PERCENTILE_MIN_MATCHES = 8;
+export const PERCENTILE_MIN_MATCHES = 5;
 
 export const PERCENTILE_METRICS = [
   "pointsPerMatch",

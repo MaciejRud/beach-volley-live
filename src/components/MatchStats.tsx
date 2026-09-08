@@ -602,9 +602,11 @@ export function MatchStats({ match, roster, stats, seasonAverages = {}, season }
           </div>
           <BarLegend items={RESOLUTION_LEGEND} />
           <p className="mt-2.5 text-[10px] leading-relaxed text-slate-400">
-            Defence and reception do not score. Green on defence means the ball was dug
-            cleanly, and reception has no positive grade in the FIVB feed at all -- only
-            errors and rallies that carried on.
+            Reception has no green: the FIVB feed grades it only by what went wrong, so the
+            bar splits into errors and rallies that carried on. Defence is left out of this
+            view entirely -- a dig never scores, which makes &quot;clean dig&quot; and
+            &quot;rally continues&quot; two names for the same outcome. The dig counts are
+            in the table above.
           </p>
         </div>
       </section>

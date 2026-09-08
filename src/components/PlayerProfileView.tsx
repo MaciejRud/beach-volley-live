@@ -1,33 +1,12 @@
 import Link from "next/link";
 import { CountryFlag } from "./CountryFlag";
 import { ArchiveScopeNote } from "./ArchiveScopeNote";
-import { BarLegend, PercentileBar, RESOLUTION_LEGEND, ResolutionBars } from "./StatBars";
 import { FormChart } from "./FormChart";
-import { PlayerStatLine } from "@/lib/fivb/types";
+import { PlayerStandings } from "./PlayerStandings";
 import { StatTotals } from "@/lib/stats/aggregate";
-import { PERCENTILE_MIN_MATCHES, PercentileMetric, metricValues } from "@/lib/stats/playerFiles";
-import { PlayerProfile } from "@/lib/stats/playerProfile";
-
-/**
- * How each ranked metric reads.
- *
- * `higherIsBetter` is not decoration: percentiles are always computed ascending,
- * so for reception errors a high percentile is a bad result and colouring it
- * green would invert the meaning.
- */
-const METRICS: {
-  key: PercentileMetric;
-  label: string;
-  format: (v: number) => string;
-  higherIsBetter: boolean;
-}[] = [
-  { key: "pointsPerMatch", label: "Points / match", format: (v) => v.toFixed(1), higherIsBetter: true },
-  { key: "spikeSuccess", label: "Kill %", format: (v) => `${v.toFixed(1)}%`, higherIsBetter: true },
-  { key: "spikeEfficiency", label: "Attack efficiency", format: (v) => `${v.toFixed(1)}%`, higherIsBetter: true },
-  { key: "blockPointsPerMatch", label: "Block points / match", format: (v) => v.toFixed(1), higherIsBetter: true },
-  { key: "serveRisk", label: "Serve risk", format: (v) => `${v.toFixed(1)}%`, higherIsBetter: true },
-  { key: "receptionFaultRate", label: "Reception errors", format: (v) => `${v.toFixed(1)}%`, higherIsBetter: false },
-];
+import { METRIC_DISPLAY } from "@/lib/stats/metricDisplay";
+import { PERCENTILE_MIN_MATCHES, metricValues } from "@/lib/stats/playerFiles";
+import { CAREER_SCOPE, PlayerProfile } from "@/lib/stats/playerProfile";
 
 /**
  * Colours a placing by where it falls in the field.
@@ -48,15 +27,6 @@ function ordinal(n: number): string {
   return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
 }
 
-/**
- * Career totals wear the shape of a match line, so the same resolution bars
- * can render them. Only the counters matter here -- the identity fields are
- * filled to satisfy the type, never read.
- */
-function totalsAsLine(totals: StatTotals): PlayerStatLine {
-  return { ...totals, playerNo: "" } as unknown as PlayerStatLine;
-}
-
 function perMatch(totals: StatTotals, key: keyof StatTotals, decimals = 1): string {
   if (totals.matches === 0) return "—";
   return ((totals[key] as number) / totals.matches).toFixed(decimals);
@@ -71,9 +41,9 @@ export function PlayerProfileView({
 }) {
   const career = metricValues(profile.career);
 
-  // Seasons come newest first; the first one carrying ranks is the most recent
-  // in which the player met the sample threshold.
-  const rankedSeason = profile.seasons.find((s) => Object.keys(s.percentiles).length > 0);
+  // Career first, then one entry per season -- the table below the picker lists
+  // the seasons only, since a career row would repeat the headline figures.
+  const seasonScopes = profile.scopes.filter((scope) => scope.key !== CAREER_SCOPE);
 
   const { summary } = profile;
   const played = summary.won + summary.lost;
@@ -159,51 +129,9 @@ export function PlayerProfileView({
         </dl>
       </div>
 
-      {/* The same decomposition as the match view, over a whole career. */}
-      <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-        <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
-          <h2 className="text-xs font-bold text-slate-900">How the actions ended</h2>
-          <span className="text-[11px] text-slate-500">
-            every skill splits exactly into point / rally continues / error
-          </span>
-        </header>
-        <div className="p-3">
-          <ResolutionBars line={totalsAsLine(profile.career)} />
-          <BarLegend items={RESOLUTION_LEGEND} />
-        </div>
-      </section>
-
-      {/* Standing against the field, for the most recent season with a rank. */}
-      {rankedSeason && (
-        <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-          <header className="flex flex-wrap items-baseline gap-x-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
-            <h2 className="text-xs font-bold text-slate-900">Standing among the field</h2>
-            <span className="text-[11px] text-slate-500">
-              {rankedSeason.season}, against everyone with at least {PERCENTILE_MIN_MATCHES}{" "}
-              measured matches
-            </span>
-          </header>
-          <div className="p-3 space-y-2.5">
-            {METRICS.map((metric) => {
-              const value = metricValues(rankedSeason.totals)[metric.key];
-              return (
-                <PercentileBar
-                  key={metric.key}
-                  label={metric.label}
-                  value={value === null ? "—" : metric.format(value)}
-                  percentile={rankedSeason.percentiles[metric.key] ?? null}
-                  higherIsBetter={metric.higherIsBetter}
-                />
-              );
-            })}
-            <p className="pt-1 text-[10px] leading-relaxed text-slate-400">
-              The dot marks the percentile, counted upwards -- so a high number means more of
-              that statistic, which for reception errors is worse, not better. Green marks a
-              strong standing for that metric, red a weak one.
-            </p>
-          </div>
-        </section>
-      )}
+      {/* One period control over both views: the player's own breakdown, and
+          where that period's numbers put them among everyone else's. */}
+      <PlayerStandings scopes={profile.scopes} />
 
       {/* The trend, ahead of the season table that states it row by row. */}
       <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
@@ -225,7 +153,7 @@ export function PlayerProfileView({
             <tr className="bg-slate-100/70 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
               <th className="py-1.5 px-3 text-left">Season</th>
               <th className="py-1.5 px-2 text-right">Matches</th>
-              {METRICS.map((metric) => (
+              {METRIC_DISPLAY.map((metric) => (
                 <th key={metric.key} className="py-1.5 px-2 text-right whitespace-nowrap">
                   {metric.label}
                 </th>
@@ -233,17 +161,18 @@ export function PlayerProfileView({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {profile.seasons.map((row) => {
+            {seasonScopes.map((row) => {
               const values = metricValues(row.totals);
+              const ranks = new Map(row.distributions.map((d) => [d.metric, d.rank]));
               return (
-                <tr key={row.season} className="hover:bg-slate-50/70">
-                  <td className="py-1.5 px-3 font-bold text-slate-900">{row.season}</td>
+                <tr key={row.key} className="hover:bg-slate-50/70">
+                  <td className="py-1.5 px-3 font-bold text-slate-900">{row.label}</td>
                   <td className="py-1.5 px-2 text-right font-mono tabular-nums text-slate-600">
                     {row.totals.matches}
                   </td>
-                  {METRICS.map((metric) => {
+                  {METRIC_DISPLAY.map((metric) => {
                     const value = values[metric.key];
-                    const rank = row.ranks[metric.key];
+                    const rank = ranks.get(metric.key);
                     return (
                       <td
                         key={metric.key}
@@ -275,9 +204,9 @@ export function PlayerProfileView({
 
       <p className="text-[10px] text-slate-400 leading-relaxed">
         The number beside each figure is the player&#39;s place that season among everyone of
-        the same gender with at least eight measured matches -- 1st is best, which for
-        reception errors means the fewest. Seasons with fewer than eight matches are shown
-        without a placing.
+        the same gender with at least {PERCENTILE_MIN_MATCHES} measured matches -- 1st is best,
+        which for reception errors means the fewest. Seasons below that are shown without a
+        placing.
       </p>
 
       <ArchiveScopeNote seasons={seasons} />
