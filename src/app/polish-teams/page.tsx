@@ -60,18 +60,19 @@ export default function CountryZonePage() {
   return (
     <div className="space-y-4">
       <div className="bg-white px-4 py-3 rounded-lg border border-slate-200 shadow-xs">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-base sm:text-lg font-black text-slate-900 tracking-tight">
-              <CountryFlag code={country} className="shrink-0" />
-              <span className="truncate">{countryName} Zone</span>
-            </h1>
-            <p className="text-xs text-slate-500">
-              All matches of {countryName} representatives in FIVB &amp; Beach Pro Tour events
-            </p>
-          </div>
+        {/* Title and control share one row at every width; the description
+            goes underneath, where it can wrap without pushing the button off
+            the line. */}
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="flex min-w-0 items-center gap-2 text-base sm:text-lg font-black text-slate-900 tracking-tight">
+            <CountryFlag code={country} className="shrink-0" />
+            <span className="truncate">{countryName} Zone</span>
+          </h1>
           <CountryPicker available={summary?.availableCountries ?? []} />
         </div>
+        <p className="mt-0.5 text-xs text-slate-500">
+          All matches of {countryName} representatives in FIVB &amp; Beach Pro Tour events
+        </p>
       </div>
 
       {error && (

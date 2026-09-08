@@ -174,6 +174,21 @@ export class CountryHelper {
     return COUNTRY_MAP[stdCode]?.name || stdCode;
   }
 
+  /**
+   * Every federation the app can name, for the country picker.
+   *
+   * The picker searches all of these rather than only the ones playing this
+   * week: choosing a country is a setting, not a reading of the current draw,
+   * and someone setting the site to England in February should not have to
+   * wait for an English event to appear before they can pick it.
+   */
+  static getAllCountries(): { code: string; name: string }[] {
+    return Object.entries(COUNTRY_MAP)
+      .map(([code, data]) => ({ code, name: data.name }))
+      // Fixed locale so the order does not depend on the reader's machine.
+      .sort((a, b) => a.name.localeCompare(b.name, "en"));
+  }
+
   /** Null for a federation not on the map, so a caller can leave it unsaid. */
   static getContinent(code: string): Continent | null {
     return CONTINENT_BY_CODE[this.getCountryCode(code)] ?? null;
