@@ -6,10 +6,13 @@ interface Props {
 /**
  * FIVB federation code to the ISO alpha-2 the flag CDN wants.
  *
- * Explicit, with no truncating fallback, because the first two letters are not
- * merely unreliable -- they are confidently wrong. BEN (Benin) truncates to
- * "be" and would fly Belgium's flag, NIG (Niger) to "ni" and Nicaragua's, PAR
- * (Paraguay) to "pa" and Panama's, LBR (Liberia) to "lb" and Lebanon's. A
+ * Two code systems reach this component. Teams carry three-letter federation
+ * codes (POL, BRA); tournaments carry ISO alpha-2 already (PL, BR), straight
+ * from the feed's CountryCode attribute. Only the three-letter ones need this
+ * map, and they get no truncating fallback, because the first two letters are
+ * not merely unreliable -- they are confidently wrong. BEN (Benin) truncates
+ * to "be" and would fly Belgium's flag, NIG (Niger) to "ni" and Nicaragua's,
+ * PAR (Paraguay) to "pa" and Panama's, LBR (Liberia) to "lb" and Lebanon's. A
  * missing flag is a gap; the wrong flag is a lie.
  */
 const ALPHA3_TO_ALPHA2: Record<string, string> = {
@@ -37,7 +40,9 @@ export function CountryFlag({ code, className = "" }: Props) {
   // would request flagcdn.com/h20/.png and leave a blank box in the row.
   if (clean.length < 2) return null;
 
-  const alpha2 = ALPHA3_TO_ALPHA2[clean];
+  // A two-letter code is already what the CDN wants; only three-letter
+  // federation codes go through the map.
+  const alpha2 = clean.length === 2 ? clean.toLowerCase() : ALPHA3_TO_ALPHA2[clean];
 
   // An unmapped federation gets a neutral tile rather than a guess: it holds
   // the row's alignment, says the code on hover, and never claims a country.
