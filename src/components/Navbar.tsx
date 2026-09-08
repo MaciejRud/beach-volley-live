@@ -65,16 +65,19 @@ export function Navbar() {
       </header>
 
       {/*
-        Mobile bottom tab bar. Fixed rather than horizontally scrollable: four
-        items still fit, and a scrolling strip would hide destinations and make
-        targets harder to hit. Bottom inset padding keeps it clear of the iOS
-        home indicator.
+        Mobile bottom tab bar. Fixed rather than horizontally scrollable: the
+        five items still fit on one row, and a scrolling strip would hide
+        destinations and make targets harder to hit. The column count is read
+        off navItems, so adding a sixth shrinks the row instead of silently
+        wrapping it. Icon and label are sized for the narrowest phone in use --
+        at 320px a column is 64px, which "Calendar" fills at 9px and no lower.
+        Bottom inset padding keeps it clear of the iOS home indicator.
       */}
       <nav
         className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 pb-[env(safe-area-inset-bottom)]"
         aria-label="Main"
       >
-        <div className="grid grid-cols-4">
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -84,13 +87,13 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`relative flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold transition-colors ${
+                className={`relative flex flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-[9px] font-bold leading-tight transition-colors ${
                   isActive ? "text-slate-900" : "text-slate-500 active:bg-slate-50"
                 }`}
               >
-                {isActive && <span className="absolute top-0 inset-x-5 h-0.5 rounded-full bg-slate-900" />}
-                <Icon className={`w-5 h-5 ${isActive ? "" : item.accent}`} />
-                <span>{item.shortLabel}</span>
+                {isActive && <span className="absolute top-0 inset-x-3 h-0.5 rounded-full bg-slate-900" />}
+                <Icon className={`w-[18px] h-[18px] ${isActive ? "" : item.accent}`} />
+                <span className="truncate max-w-full">{item.shortLabel}</span>
               </Link>
             );
           })}

@@ -14,6 +14,8 @@ import type { PercentileMetric } from "./playerFiles";
 export interface MetricDisplay {
   key: PercentileMetric;
   label: string;
+  /** Column head where the full label will not fit -- a phone-width table. */
+  short: string;
   format: (value: number) => string;
   higherIsBetter: boolean;
   /** Read under the distribution, saying what the number actually counts. */
@@ -24,6 +26,7 @@ export const METRIC_DISPLAY: MetricDisplay[] = [
   {
     key: "pointsPerMatch",
     label: "Points / match",
+    short: "PTS",
     format: (v) => v.toFixed(1),
     higherIsBetter: true,
     note: "points this player scored themselves",
@@ -31,6 +34,7 @@ export const METRIC_DISPLAY: MetricDisplay[] = [
   {
     key: "spikeSuccess",
     label: "Kill %",
+    short: "KILL",
     format: (v) => `${v.toFixed(1)}%`,
     higherIsBetter: true,
     note: "attacks that ended in a point",
@@ -38,6 +42,7 @@ export const METRIC_DISPLAY: MetricDisplay[] = [
   {
     key: "spikeEfficiency",
     label: "Attack efficiency",
+    short: "ATK",
     format: (v) => `${v.toFixed(1)}%`,
     higherIsBetter: true,
     note: "kills minus errors, over all attacks",
@@ -45,6 +50,7 @@ export const METRIC_DISPLAY: MetricDisplay[] = [
   {
     key: "blockPointsPerMatch",
     label: "Block points / match",
+    short: "BLK",
     format: (v) => v.toFixed(1),
     higherIsBetter: true,
     // The field splits in two here rather than clustering: in a pair one player
@@ -56,6 +62,7 @@ export const METRIC_DISPLAY: MetricDisplay[] = [
   {
     key: "serveRisk",
     label: "Serve risk",
+    short: "SRV",
     format: (v) => `${v.toFixed(1)}%`,
     higherIsBetter: true,
     note: "serves that ended the rally either way -- ace or error",
@@ -63,6 +70,7 @@ export const METRIC_DISPLAY: MetricDisplay[] = [
   {
     key: "receptionFaultRate",
     label: "Reception errors",
+    short: "REC",
     format: (v) => `${v.toFixed(1)}%`,
     higherIsBetter: false,
     note: "receptions that lost the point outright -- lower is better",

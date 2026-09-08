@@ -287,14 +287,24 @@ export function GameBoard({ data }: { data: GameData }) {
               {scope.label}
             </span>
           </header>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs border-collapse min-w-[520px]">
+          {/* Fixed layout with narrow arrow columns, so the name and all six
+              readings stay on one line at phone width. The name is the only
+              elastic column and truncates; the arrows never wrap or scroll,
+              because a row that has to be scrolled sideways to be read is not
+              feedback you can act on mid-guess. */}
+          <div>
+            <table className="w-full table-fixed text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-100/70 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="py-1.5 px-3 text-left">Guess</th>
+                <tr className="bg-slate-100/70 border-b border-slate-200 text-[9px] sm:text-[10px] font-bold uppercase tracking-wide sm:tracking-wider text-slate-500">
+                  <th className="py-1.5 pl-2 sm:pl-3 pr-1 text-left">Guess</th>
                   {METRIC_DISPLAY.map((metric) => (
-                    <th key={metric.key} className="py-1.5 px-1 text-center" title={metric.label}>
-                      {metric.label.split(" ")[0]}
+                    <th
+                      key={metric.key}
+                      className="w-9 sm:w-20 py-1.5 px-0.5 text-center"
+                      title={metric.label}
+                    >
+                      <span className="sm:hidden">{metric.short}</span>
+                      <span className="hidden sm:inline">{metric.label.split(" ")[0]}</span>
                     </th>
                   ))}
                 </tr>
@@ -307,11 +317,12 @@ export function GameBoard({ data }: { data: GameData }) {
 
                   return (
                     <tr key={`${no}-${round}`} className={correct ? "bg-emerald-50" : ""}>
-                      <td className="py-1.5 px-3">
-                        <span className="flex items-center gap-1.5">
+                      <td className="py-1.5 pl-2 sm:pl-3 pr-1">
+                        <span className="flex items-center gap-1 sm:gap-1.5 min-w-0">
                           <CountryFlag code={guessed.fed} className="shrink-0" />
                           <span
-                            className={`font-bold ${correct ? "text-emerald-700" : "text-slate-700"}`}
+                            title={guessed.name}
+                            className={`truncate font-bold ${correct ? "text-emerald-700" : "text-slate-700"}`}
                           >
                             {guessed.name}
                           </span>
@@ -329,9 +340,9 @@ export function GameBoard({ data }: { data: GameData }) {
                           mark = <span className="text-base text-emerald-600">✓</span>;
                         } else if (mine !== null && theirs !== null) {
                           if (theirs > mine) {
-                            mark = <ArrowUp className="mx-auto h-4 w-4 text-emerald-600" strokeWidth={3.5} />;
+                            mark = <ArrowUp className="mx-auto h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600" strokeWidth={3} />;
                           } else if (theirs < mine) {
-                            mark = <ArrowDown className="mx-auto h-4 w-4 text-red-500" strokeWidth={3.5} />;
+                            mark = <ArrowDown className="mx-auto h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" strokeWidth={3} />;
                           } else {
                             mark = <span className="text-sm font-black text-slate-900">=</span>;
                           }
@@ -340,7 +351,7 @@ export function GameBoard({ data }: { data: GameData }) {
                         return (
                           <td
                             key={metric.key}
-                            className="py-1.5 px-1 text-center font-bold"
+                            className="py-1.5 px-0.5 text-center font-bold"
                             title={
                               correct || mine === null || theirs === null
                                 ? metric.label
