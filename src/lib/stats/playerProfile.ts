@@ -103,6 +103,12 @@ export interface ScopeRow {
 
 export const CAREER_SCOPE = "career";
 
+/** Seasons the archive covers, newest first -- the period picker's options. */
+export async function archivedSeasons(): Promise<number[]> {
+  const index = await loadPlayerIndex();
+  return [...(index?.seasons ?? [])].sort((a, b) => b - a);
+}
+
 export interface TournamentRow {
   tournamentNo: string;
   code: string;
@@ -209,7 +215,7 @@ function rankOf(
 const LOWER_IS_BETTER = new Set<PercentileMetric>(["receptionFaultRate"]);
 
 /** One metric's field: the values themselves, plus the histogram drawn from them. */
-interface FieldStats {
+export interface FieldStats {
   values: number[];
   min: number;
   max: number;
@@ -217,7 +223,7 @@ interface FieldStats {
 }
 
 /** Everything one period's field says: per-metric shape, plus what it can be trusted on. */
-interface FieldSummary {
+export interface FieldSummary {
   metrics: Partial<Record<PercentileMetric, FieldStats>>;
   blockMeasured: boolean;
 }
@@ -273,7 +279,7 @@ function summarise(values: number[]): FieldStats | null {
  */
 const fieldCache = new Map<string, FieldSummary>();
 
-async function fieldFor(scopeKey: string, gender: Gender): Promise<FieldSummary> {
+export async function fieldFor(scopeKey: string, gender: Gender): Promise<FieldSummary> {
   // Every player page asks for the same handful of periods, and the files do
   // not change while the process runs -- so scan them once per period.
   const cacheKey = `${scopeKey}:${gender}`;

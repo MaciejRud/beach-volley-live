@@ -235,12 +235,15 @@ export function DistributionRow({
   distribution,
   format,
   higherIsBetter,
+  showRank = true,
 }: {
   label: string;
   note: string;
   distribution: MetricDistribution;
   format: (value: number) => string;
   higherIsBetter: boolean;
+  /** The guessing game hides the placing: it would say more than the shape does. */
+  showRank?: boolean;
 }) {
   const { value, percentile, rank, min, max, bins } = distribution;
 
@@ -261,15 +264,17 @@ export function DistributionRow({
     <div>
       <div className="flex items-baseline gap-x-2">
         <span className="text-[11px] font-medium text-slate-700">{label}</span>
-        <span className="ml-auto font-mono text-[10px] whitespace-nowrap text-slate-500">
-          {rank ? (
-            <>
-              #{rank.place} <span className="text-slate-300">of {rank.outOf}</span>
-            </>
-          ) : (
-            <span className="text-slate-300">not ranked</span>
-          )}
-        </span>
+        {showRank && (
+          <span className="ml-auto font-mono text-[10px] whitespace-nowrap text-slate-500">
+            {rank ? (
+              <>
+                #{rank.place} <span className="text-slate-300">of {rank.outOf}</span>
+              </>
+            ) : (
+              <span className="text-slate-300">not ranked</span>
+            )}
+          </span>
+        )}
       </div>
       {/* Its own line rather than beside the label: in a half-width column the
           two together wrap into a ragged block. */}

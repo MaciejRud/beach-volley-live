@@ -86,6 +86,42 @@ const ALPHA2_TO_ALPHA3: Record<string, string> = {
   DK: "DEN",
 };
 
+/**
+ * Continents, for grouping federations without naming them.
+ *
+ * Kept as its own map rather than a field on COUNTRY_MAP so adding it does not
+ * rewrite all 42 country lines.
+ *
+ * Where geography and the sport disagree, the volleyball confederation wins:
+ * Turkey and Israel both play under CEV, so both are Europe here. That is the
+ * grouping anyone following the tour already has in their head.
+ */
+export type Continent =
+  | "Europe"
+  | "South America"
+  | "North America"
+  | "Asia"
+  | "Oceania"
+  | "Africa";
+
+const CONTINENT_BY_CODE: Record<string, Continent> = {
+  POL: "Europe", NOR: "Europe", SWE: "Europe", GER: "Europe", NED: "Europe",
+  ITA: "Europe", ESP: "Europe", FRA: "Europe", LAT: "Europe", LTU: "Europe",
+  EST: "Europe", CZE: "Europe", SUI: "Europe", AUT: "Europe", UKR: "Europe",
+  POR: "Europe", FIN: "Europe", GBR: "Europe", ENG: "Europe", GRE: "Europe",
+  BEL: "Europe", DEN: "Europe", SRB: "Europe", SLO: "Europe", SVK: "Europe",
+  HUN: "Europe", CRO: "Europe", BUL: "Europe", ROU: "Europe",
+  TUR: "Europe", ISR: "Europe",
+
+  BRA: "South America", ARG: "South America", CHI: "South America",
+
+  USA: "North America", CAN: "North America", MEX: "North America",
+
+  QAT: "Asia", JPN: "Asia", CHN: "Asia",
+
+  AUS: "Oceania", NZL: "Oceania",
+};
+
 export class CountryHelper {
   static getCountryCode(code: string): string {
     const clean = code.toUpperCase().trim();
@@ -98,6 +134,11 @@ export class CountryHelper {
   static getCountryName(code: string): string {
     const stdCode = this.getCountryCode(code);
     return COUNTRY_MAP[stdCode]?.name || stdCode;
+  }
+
+  /** Null for a federation not on the map, so a caller can leave it unsaid. */
+  static getContinent(code: string): Continent | null {
+    return CONTINENT_BY_CODE[this.getCountryCode(code)] ?? null;
   }
 
   static getFlag(code: string): string {

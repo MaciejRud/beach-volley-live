@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Flag, Activity, Users } from "lucide-react";
+import { Calendar, Flag, Activity, Users, HelpCircle } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Tournament Calendar", shortLabel: "Calendar", icon: Calendar, accent: "" },
   { href: "/polish-teams", label: "Poland Zone", shortLabel: "Poland", icon: Flag, accent: "text-red-500" },
   { href: "/live", label: "Live Matches", shortLabel: "Live", icon: Activity, accent: "text-emerald-500" },
   { href: "/players", label: "Players", shortLabel: "Players", icon: Users, accent: "text-sky-500" },
+  { href: "/play", label: "Guess the Player", shortLabel: "Guess", icon: HelpCircle, accent: "text-amber-500" },
 ];
 
 export function Navbar() {
