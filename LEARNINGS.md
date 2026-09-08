@@ -255,3 +255,111 @@ nie pada - po prostu widzisz nieaktualną stronę.
 Rozpoznanie zajęło cztery restarty, bo szukałem błędu w kodzie. Szybszy test:
 `grep` po skompilowanym chunku w `.next/static/chunks/` za fragmentem nowego
 kodu. Nie ma go tam - to nie kod jest winny, tylko cache.
+
+## 2026-09-08: usuwając fallback, sprawdź wszystkich wywołujących, nie tylko ten jeden przypadek
+
+Picker krajów odsłonił 26 federacji naraz i wyszło, że `CountryFlag` przy
+nieznanym kodzie brał dwie pierwsze litery. To nie było tylko nieskuteczne -
+było **cicho kłamliwe**: BEN (Benin) dawało "be", czyli flagę Belgii, NIG
+(Niger) "ni" = Nikaragua, PAR (Paragwaj) "pa" = Panama, LBR (Liberia) "lb" =
+Liban. TAN, SUD i URU po prostu wracały 404.
+
+Naprawiłem to porządnie: 20 federacji dopisane jawnie, zgadywanie wycięte,
+nieznany kod dostaje neutralny kafelek. Brak flagi to luka, zła flaga to
+kłamstwo.
+
+I tym samym zepsułem kalendarz turniejów.
+
+Bo przez ten komponent idą **dwa różne systemy kodów**. Drużyny mają
+trzyliterowe kody FIVB (`POL`, `BRA`). Turnieje mają dwuliterowe ISO prosto z
+atrybutu `CountryCode` - wszystkie 87 z nich. Dla tych drugich obcięcie do
+dwóch liter nie było zgadywaniem, tylko operacją tożsamościową. Wyciąłem je
+razem ze złym przypadkiem i cała lista turniejów spadła na szary kafelek.
+
+Sprawdziłem wtedy dokładnie ten scenariusz, który mnie zainteresował - trzy
+litery spoza mapy - i ani jednego innego. `CountryFlag` ma siedem wywołań w
+czterech komponentach.
+
+**Wniosek na przyszłość:** zmiana kontraktu współdzielonego komponentu to nie
+jest zmiana lokalna, choćby diff miał pięć linii. Zanim usunę fallback, robię
+`grep` po wszystkich wywołaniach i wypisuję, jakie **dane** każde z nich podaje.
+"Fallback jest zły" bywa prawdą tylko dla części ruchu, który przez niego
+przechodzi.
+
+## 2026-09-08: FIVB w 2022 liczyło tylko udane bloki
+
+Przełącznik okresu na profilu zawodnika ujawnił, że pasek "How the actions
+ended" dla sezonu 2022 jest w całości zielony. Nie błąd renderowania - feed:
+
+| sezon | blockTotal | blockPoint | blockFault | blockContinue |
+|---|---|---|---|---|
+| 2022 | 12 541 | **11 951 (95%)** | 432 | 158 |
+| 2023 | 46 660 | 15 334 (33%) | 19 290 | 12 036 |
+| 2025 | 54 921 | 15 486 (28%) | 23 255 | 16 180 |
+
+W 2022 rejestrowano praktycznie wyłącznie bloki punktowe. Rozkład na
+punkt/kontynuacja/błąd dla tego sezonu nie niesie informacji - pokazywałby
+każdego jako bezbłędnego blokującego.
+
+Ciekawsze było **gdzie** postawić granicę. Pierwsza myśl: liczyć udział bloków
+niepunktowych per zawodnik i odcinać poniżej progu. Sprawdziłem rozkłady i to
+by nie zadziałało - w 2022 zawodnik potrafi mieć 45% bloków niepunktowych, a w
+2023 tylko 18%. **Zakresy zachodzą, więc próg per gracz myliłby się w obie
+strony.** Na poziomie całego sezonu separacja jest czysta: 4,7% vs 67%.
+
+Metryka rankingowa (`blockPoint / mecze`) jest bezpieczna, bo `blockPoint` jest
+spójny między sezonami. Zepsuty jest tylko rozkład.
+
+**Wniosek na przyszłość:** kiedy dane trzeba zakwalifikować jako wiarygodne albo
+nie, sprawdzam rozkłady na kilku poziomach agregacji, zanim wybiorę ten, na
+którym stawiam próg. Poziom, na którym klasy się rozdzielają, nie zawsze jest
+tym, na którym instynktownie się liczy.
+
+## 2026-09-08: okno 25 turniejów nigdy nie dosięga zakończonych (decyzja: zostawiamy)
+
+Poland Zone pokazywała zero meczów. Nie dlatego, że Polacy nie grają.
+
+`getTournamentWindow()` sortuje sezon: `running`, potem `upcoming`, na końcu
+`finished` - i bierze pierwsze 25. Sezon 2026 ma 12 running i 80 upcoming.
+Limit wyczerpuje się na 25. pozycji, **zanim algorytm dojdzie do pierwszego
+zakończonego turnieju**, a tych jest 546.
+
+Czyli kategoria "Recent", którą strona reklamuje we własnym tytule ("Live,
+Scheduled & Recent"), nie ma prawa się nigdy pojawić. We wrześniu Beach Pro
+Tour ma po sezonie, więc cała polska aktywność siedzi właśnie tam. Skan
+dziesięciu ostatnich turniejów BPT: 10 polskich meczów (Elite16 Hamburg,
+Challenge Shangluo) - dane są, tylko po drugiej stronie granicy.
+
+Druga usterka w tym samym sortowaniu: malejąca data jest słuszna dla
+zakończonych, ale odwrotna dla nadchodzących. Z 80 przyszłych turniejów okno
+bierze te **najbardziej odległe** (6 listopada przed przyszłym tygodniem).
+
+Proponowana poprawka to trzy osobne budżety zamiast jednego cięcia: wszystkie
+running, ~6 najbliższych upcoming, ~12 najnowszych finished. **Decyzja z
+2026-09-08: nie wdrażamy teraz, może później.** Zapisane, żeby diagnoza nie
+przepadła - metoda jest już wyciągnięta osobno, więc zmiana będzie w jednym
+miejscu.
+
+## 2026-09-08: `localeCompare` bez locale to niedeterminizm między maszynami
+
+Push odbił się od zdalnych zmian. Zdalny commit `chore: update statistics
+archive` z cotygodniowego workflow zmienił **wyłącznie kolejność dwóch wpisów**
+w `player-index.json` - te same sezony, ci sami 577 zawodnicy, identyczna
+liczba bajtów:
+
+```
+lokalnie:  ... Lunio Urszula, Łosiak Bartosz ...
+w CI:      ... Łosiak Bartosz, Lunio Urszula ...
+```
+
+`build-player-data.ts` sortuje przez `a.d.localeCompare(b.d)` bez podanego
+locale, więc wynik zależy od ustawień maszyny. Windows z polskim collation
+stawia `Ł` tuż za `L`, ubuntu w GitHub Actions inaczej.
+
+Skutki są dwa i oba realne: workflow produkuje co tydzień pusty commit z
+komunikatem, który kłamie, a każda lokalna regeneracja danych kończy się
+odbitym pushem.
+
+**Wniosek na przyszłość:** każde `localeCompare` w kodzie, który generuje
+zacommitowany plik, dostaje jawne locale. Sortowanie bez locale jest jak
+`Date.now()` w snapshocie - działa, dopóki nie porównasz dwóch maszyn.
