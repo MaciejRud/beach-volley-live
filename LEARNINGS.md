@@ -363,3 +363,30 @@ odbitym pushem.
 **Wniosek na przyszłość:** każde `localeCompare` w kodzie, który generuje
 zacommitowany plik, dostaje jawne locale. Sortowanie bez locale jest jak
 `Date.now()` w snapshocie - działa, dopóki nie porównasz dwóch maszyn.
+
+## 2026-09-26: Status turnieju w VIS to deklaracja organizatora, nie fakt
+
+Na stronie U20 wisiał jako "trwający" trzy tygodnie po finale. Przyczyna nie
+była w naszym kodzie, tylko w danych: CEV U20 European Championships (nr 9094)
+ma w VIS `Status="6"`, choć wszystkie 103 mecze mają status zakończony, a
+bliźniaczy turniej drugiej płci (9095) poprawnie dostał `7`. Ktoś zamknął jedną
+płeć i zapomniał o drugiej.
+
+Parser brał kody 2-6 za "running" bez patrzenia na daty. Po sprawdzeniu całego
+sezonu okazało się, że takich zombie było **11 z 15** "trwających" turniejów -
+najstarszy skończył się w lutym. Każdy z nich co 25 s ciągnął listę meczów w
+`/api/live`.
+
+Poprawka (`341b7e5`): data końca starsza niż wczoraj wygrywa z kodem. Dzień
+zapasu, bo "dziś" liczymy w UTC, a finał w Amerykach kończy się po północy UTC.
+
+**Wniosek:** pole ustawiane ręcznie przez organizatora (status, a pewnie i inne
+flagi) traktuj jak wskazówkę i krzyżuj z czymś, co zmienia się samo - datami
+albo statusami meczów. Te same dane mają jeszcze dwa niezałatane przypadki:
+kod `10` (CNVP Formentera), którego parser nie zna, i kod `1` po dacie końca
+(Maputo 3), pokazywany dalej jako nadchodzący.
+
+Przy okazji: klubowy CEV Beach Volley European Cup (np. Poznań, 26-27.09.2026)
+**nie istnieje w VIS**. Wyniki są tylko w `beachevents.cev.eu` jako HTML bez
+API, a drużyna to klub z 5-6 zawodnikami, nie para. Odrzucone świadomie - brak
+porządnego źródła danych.
