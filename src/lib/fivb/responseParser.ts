@@ -363,7 +363,15 @@ export class ResponseParser {
 
     if (code === 0) return { status: "cancelled", statusText: "Cancelled" };
     if (code === 7 || code === 8) return { status: "finished", statusText: "Finished" };
-    if (code >= 2 && code <= 6) return { status: "running", statusText: "In Progress" };
+    if (code >= 2 && code <= 6) {
+      // Organisers sometimes never close a tournament in VIS (CEV U20 Euro 2026,
+      // no. 9094, stayed at 6 with every match finished), so an end date in the
+      // past overrides the code. One day of grace: "today" is UTC, and a final in
+      // the Americas runs past midnight UTC.
+      const yesterday = new Date(Date.now() - 86_400_000).toISOString().split("T")[0];
+      if (endDate && endDate < yesterday) return { status: "finished", statusText: "Finished" };
+      return { status: "running", statusText: "In Progress" };
+    }
     if (code === 1) {
       if (startDate && startDate <= today && (!endDate || endDate >= today)) {
         return { status: "running", statusText: "In Progress" };
