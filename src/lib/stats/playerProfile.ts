@@ -40,6 +40,16 @@ function once<T>(loader: () => Promise<T | null>): () => Promise<T | null> {
 }
 
 export const loadPlayerIndex = once(() => readJson<PlayerIndexFile>(PLAYER_INDEX_FILE));
+
+/**
+ * Player numbers that have a page at /players/[playerNo]. The index lists
+ * exactly the players the form file holds, which is what decides whether a
+ * page exists (see loadPlayerProfile), and it is the small file of the two.
+ */
+export async function playersWithPages(): Promise<Set<string>> {
+  const index = await loadPlayerIndex();
+  return new Set((index?.players ?? []).map((p) => p.n));
+}
 const loadForm = once(() => readJson<PlayerFormFile>(PLAYER_FORM_FILE));
 const loadAggregates = once(() => readJson<AggregateFile>(AGGREGATES_FILE));
 const loadDirectory = once(() => readJson<PlayerDirectory>(PLAYERS_FILE));

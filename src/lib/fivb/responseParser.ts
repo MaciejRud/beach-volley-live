@@ -251,6 +251,16 @@ export class ResponseParser {
 
         const mainPos = Number(item["@_PositionInMainDraw"] ?? item.PositionInMainDraw ?? 0);
         const qualPos = Number(item["@_PositionInQualification"] ?? item.PositionInQualification ?? 0);
+        // Empty attributes ("") mean "not set yet": entry points and positions
+        // stay blank until FIVB confirms the list, about four weeks out.
+        const positive = (raw: unknown): number | undefined => {
+          const n = Number(raw ?? 0);
+          return n > 0 ? n : undefined;
+        };
+        // Rank is negative for no-shows and quota eliminations, so the text is
+        // only kept for a real placing.
+        const rank = Number(item["@_Rank"] ?? item.Rank ?? 0);
+        const rankText = String(item["@_RankText"] ?? item.RankText ?? "");
 
         // Kept apart rather than collapsed into one number: which one to show
         // depends on the round a match belongs to.
@@ -261,6 +271,14 @@ export class ResponseParser {
           federationCode: String(item["@_FederationCode"] ?? item.FederationCode ?? "").toUpperCase(),
           mainDrawSeed: mainPos > 0 ? mainPos : undefined,
           qualificationSeed: qualPos > 0 ? qualPos : undefined,
+          isInMainDraw: String(item["@_IsInMainDraw"] ?? item.IsInMainDraw ?? "") === "1",
+          isInQualification: String(item["@_IsInQualification"] ?? item.IsInQualification ?? "") === "1",
+          status: Number(item["@_Status"] ?? item.Status ?? 0),
+          entryType: Number(item["@_Type"] ?? item.Type ?? 0),
+          entryPoints: positive(item["@_EntryPoints"] ?? item.EntryPoints),
+          positionInEntry: positive(item["@_PositionInEntry"] ?? item.PositionInEntry),
+          positionInReserve: positive(item["@_PositionInReserve"] ?? item.PositionInReserve),
+          rankText: rank > 0 && rankText ? rankText : undefined,
           player1: this.parsePlayerRef(item, 1),
           player2: this.parsePlayerRef(item, 2),
         });

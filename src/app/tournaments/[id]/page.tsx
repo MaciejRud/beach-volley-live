@@ -9,6 +9,8 @@ import { MatchTable } from "@/components/MatchTable";
 import { PoolStandings } from "@/components/PoolStandings";
 import { groupByDraw } from "@/lib/fivb/phases";
 import { describeBracketSides } from "@/lib/fivb/bracket";
+import { EntryList } from "@/components/EntryList";
+import type { EntryGroup } from "@/lib/fivb/entryList";
 import { ArrowLeft } from "lucide-react";
 
 export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,6 +19,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [entryGroups, setEntryGroups] = useState<EntryGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +47,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       const json = await res.json();
       setTournament(json.tournament || null);
       setMatches(json.matches || []);
+      setEntryGroups(json.entryGroups || []);
     } catch (err: any) {
       setError(err?.message || "Failed to load tournament data");
     } finally {
@@ -140,8 +144,15 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
             </section>
           ))}
         </div>
+      ) : matches.length === 0 && entryGroups.length > 0 ? (
+        // Weeks before the event the entry list is all there is to show.
+        <EntryList groups={entryGroups} defaultOpen />
       ) : (
         <MatchTable matches={matches} title="Tournament matches" sideLabels={sideLabels} />
+      )}
+
+      {!isLoading && matches.length > 0 && entryGroups.length > 0 && (
+        <EntryList groups={entryGroups} defaultOpen={false} />
       )}
     </div>
   );

@@ -87,6 +87,28 @@ export interface TeamEntry {
   mainDrawSeed?: number;
   /** Draw position in the qualification, absent for a directly entered pair. */
   qualificationSeed?: number;
+  isInMainDraw: boolean;
+  isInQualification: boolean;
+  /**
+   * FIVB BeachTeamStatus: 0 Registered, 1 Deleted, 2 Withdrawn,
+   * 3 WithdrawnWithMedicalCert, 4 LateWithdraw, 5 NoShow.
+   */
+  status: number;
+  /**
+   * FIVB BeachTeamType: how the pair got its place. 0 Normal, 1 WildCard,
+   * 2 TechnicalWildCard, 3 LateEntry, 4 Reserve, 5 HostTeam,
+   * 6 QualificationWildCard, 7 Confederation, 8 FederationSpot,
+   * 9 ConfederationSpot, 10 OrganizerVacancy.
+   */
+  entryType: number;
+  /** Sum of both players' entry points; absent until FIVB confirms the list. */
+  entryPoints?: number;
+  /** Place on the entry list, ranked by entry points. */
+  positionInEntry?: number;
+  /** Place on the reserve list, for a pair that got into neither draw. */
+  positionInReserve?: number;
+  /** Final placing ("5", "9"); absent before the end and for Futures. */
+  rankText?: string;
   player1?: PlayerRef;
   player2?: PlayerRef;
 }
