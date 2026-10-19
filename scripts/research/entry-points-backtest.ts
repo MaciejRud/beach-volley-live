@@ -140,6 +140,19 @@ function entryPoints(results: Result[]): number {
   return bestThree([...lastFour, ...extra]);
 }
 
+/**
+ * Why a team-list row is not a result, or null when it is one. Every rule
+ * lives here, so whatever it throws away can be shown next to a miss.
+ */
+function dropReason(r: Record<string, string>, points: number, mandatory: boolean): string | null {
+  // Zonal tours award points to rows with neither draw flag set (WEVZA
+  // Modena 2025: 108 points, both flags 0), so points alone make a result.
+  if (r.IsInMainDraw !== "1" && r.IsInQualification !== "1" && points === 0) return "in no draw";
+  // Sanctioned events with no points cannot help, and cannot hurt either.
+  if (!mandatory && points === 0) return "optional, no points";
+  return null;
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   fs.mkdirSync(opts.cacheDir, { recursive: true });
@@ -168,6 +181,7 @@ async function main() {
   );
 
   const byPlayer = new Map<string, Result[]>();
+  const dropped = new Map<string, string[]>();
   let fetched = 0;
   for (const t of pool) {
     const rows = await teamList(t.no, opts.cacheDir);
@@ -177,12 +191,19 @@ async function main() {
       HOST_OVERRIDES[t.no] ?? EXTRA_COUNTRY_CODES[t.countryCode] ?? CountryHelper.getCountryCode(t.countryCode);
     for (const r of rows) {
       const points = Number(r.EarnedPointsPlayer || 0);
-      // Zonal tours award points to rows with neither draw flag set (WEVZA
-      // Modena 2025: 108 points, both flags 0), so points alone make a result.
-      if (r.IsInMainDraw !== "1" && r.IsInQualification !== "1" && points === 0) continue;
       const mandatory = MANDATORY_TYPES.has(t.type);
-      // Sanctioned events with no points cannot help, and cannot hurt either.
-      if (!mandatory && points === 0) continue;
+      const reason = dropReason(r, points, mandatory);
+      if (reason) {
+        // A dropped row that carried points is a blind spot of this script,
+        // not data missing from VIS: keep it to print under the miss.
+        if (points > 0)
+          for (const playerNo of [r.NoPlayer1, r.NoPlayer2]) {
+            const list = dropped.get(playerNo) ?? [];
+            list.push(`${endOf(t)} ${t.no} type ${t.type} ${points} pts (${reason})`);
+            dropped.set(playerNo, list);
+          }
+        continue;
+      }
       for (const playerNo of [r.NoPlayer1, r.NoPlayer2]) {
         if (!playerNo || playerNo === "0") continue;
         const homeFutures = t.type === FUTURES && country === r.FederationCode;
@@ -217,7 +238,17 @@ async function main() {
     team.official += p.official;
     team.ours += ours;
     teams.set(p.team, team);
-    if (diff !== 0) misses.push(`  ${p.team.padEnd(28)} ${p.no.padStart(7)} official ${p.official} ours ${ours} (${diff > 0 ? "+" : ""}${diff})`);
+    if (diff === 0) continue;
+    // Equal gaps for both partners point at an event they played together.
+    const counted = [...results]
+      .sort((a, b) => b.end.localeCompare(a.end))
+      .slice(0, 8)
+      .map((r) => `${r.end} ${r.tournamentNo} ${r.points}${r.optional ? " opt" : ""}`);
+    misses.push(
+      `  ${p.team.padEnd(28)} ${p.no.padStart(7)} official ${p.official} ours ${ours} (${diff > 0 ? "+" : ""}${diff})`,
+      `      counted (newest 8): ${counted.join(", ") || "none"}`,
+      ...(dropped.get(p.no) ?? []).map((d) => `      dropped: ${d}`)
+    );
   }
 
   const teamTotals = [...teams.values()];
