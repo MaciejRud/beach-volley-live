@@ -483,3 +483,42 @@ znaczy tu "istnieje w modelu FIVB", nie "dostaniesz je przez API".
 Do sprawdzenia po 2026-11-11 (Itapema przekroczy -28 dni): czy i kiedy
 dochodzą punkty wejściowe i przydział -- dziś nie było żadnego turnieju BPT w
 oknie, w którym dałoby się to zobaczyć.
+
+## 2026-10-19 -- Status "trwa" przed startem i dwa domknięte przypadki z 09-26
+
+### Problem
+Igrzyska Olimpijskie Młodzieży 2026 (9530/9531, start 31.10) wisiały na liście
+jako trwające i `/api/live` co 25 s ciągnął ich mecze -- dwa tygodnie przed
+pierwszym gwizdkiem. VIS ma dla nich `Status="6"`.
+
+### Cause
+Lustro przypadku z 09-26: tam organizator zapomniał zamknąć turniej, tu otworzył
+go za wcześnie. Poprawka `341b7e5` patrzyła tylko na datę końca. Pomiar całego
+sezonu 2026 przy okazji zamknął dwie zaległości z tamtego wpisu:
+- kod `10` to w praktyce "odwołany" -- w latach 2024-2026 56 turniejów, żaden
+  z zakończonym meczem, prawie połowa ma "CANCELLED" w tytule (CNVP Formentera
+  też tu jest);
+- kod `1` po dacie końca to 39 turniejów w 2026, wszystkie bez jednego meczu w
+  VIS. Część odwołana ("Cancelado"), część pewnie się odbyła, tylko wyniki nie
+  trafiły do VIS (Czech National Tour, mistrzostwa Włoch).
+
+Miernik sprawdzony na znanym przypadku, zanim uwierzyłem w "0 meczów": 9094 dał
+103/103, jak w wpisie z 09-26.
+
+### Fix
+`src/lib/fivb/responseParser.ts` `mapTournamentStatus` (`f7da84a`): kod 2-6 z
+pierwszym dniem kwalifikacji później niż jutro UTC -> upcoming; kod 10 ->
+cancelled; kod 1 po dacie końca -> finished. Pierwszy dzień liczony od
+kwalifikacji, nie od drabinki głównej -- turniej w kwalifikacjach naprawdę już
+trwa. Dzień zapasu w obie strony; świadomy koszt: YOG pokaże się jako trwający
+od 30.10.
+
+Kod 1 po końcu -> finished, nie cancelled: "odwołany" byłby kłamstwem dla
+turniejów, które się odbyły bez wyników w VIS; "zakończony" mówi tylko tyle,
+ile wiemy -- że termin minął.
+
+### Wzór do zapamiętania / Lekcja
+Ręcznie ustawiany status jest nieaktualny w obie strony, więc data musi go
+ograniczać z obu końców, nie tylko z jednego. Naprawiając jedną stronę,
+sprawdź od razu drugą -- 09-26 by to wyłapało. Zostają kody `9` i `11`
+(2025: 2 i 6 turniejów), które dalej dają `unknown`.
