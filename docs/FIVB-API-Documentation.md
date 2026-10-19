@@ -293,20 +293,31 @@ Version
 > **Key for live detection:** Status = 6 means tournament is currently running
 
 ### Tournament Type (partial list)
+
+Rows marked ✓ were checked against the live tournament lists for 2025-2027
+(2026-10-19). An earlier version of this table had 51 and 53 swapped.
+
 | Code | Type |
 |------|------|
 | 0 | Grand Slam |
-| 15 | National Tour |
+| 3 | Beach World Series (from 2027, successor of the Beach Pro Tour) ✓ |
+| 4 | World Championships (senior) ✓ |
+| 5 | Olympic Games ✓ |
+| 15 | National Tour ✓ |
 | 32 | Major Series |
 | 33 | World Tour Finals |
 | 34 | Continental Championship |
 | 35 | Test (**skip these!**) |
 | 36 | Snow Volleyball |
 | 38-42 | World Tour 5-Star to 1-Star |
-| 50 | King of the Court |
-| 51 | Beach Pro Tour Futures |
-| 52 | Beach Pro Tour Challenge |
-| 53 | Beach Pro Tour Elite16 |
+| 50 | King of the Court ✓ |
+| 51 | Beach Pro Tour Elite16 -- also "Beach Elite" events with no "BPT" in the title ✓ |
+| 52 | Beach Pro Tour Challenge ✓ |
+| 53 | Beach Pro Tour Futures ✓ |
+| 54 | Beach Pro Tour Finals ✓ |
+
+Classify by this code, not by the title: `ResponseParser.classifyTournament`
+does, and falls back to title matching only for codes it does not know.
 
 ### Match Status (BeachMatchStatus enum)
 | Code | Status | Category |

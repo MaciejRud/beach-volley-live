@@ -390,3 +390,51 @@ Przy okazji: klubowy CEV Beach Volley European Cup (np. Poznań, 26-27.09.2026)
 **nie istnieje w VIS**. Wyniki są tylko w `beachevents.cev.eu` jako HTML bez
 API, a drużyna to klub z 5-6 zawodnikami, nie para. Odrzucone świadomie - brak
 porządnego źródła danych.
+
+## 2026-10-19 -- Nazwa turnieju to szyld, kod typu to numer w KRS
+
+### Problem
+Brazylijskie "Beach Elite Itapema" (9582/9583, grudzień 2026) wylądowało w
+zakładce National Tours, zamiast w Elite 16. Tak samo trzy turnieje "Beach Elite"
+w 2027 i nowy "Beach World Series Dubai" (9584/9585, styczeń 2027). Przy
+okazji wyszło odwrotne pudło: CSVP Finals - Iquique (finał touru Ameryki
+Południowej) od początku siedział w sekcji Beach Pro Tour: Elite 16.
+
+### Cause
+`classifyTournament` decydował po tekście nazwy: "bpt elite", "elite16",
+"challenge", "finals". FIVB przemianowało cykl -- "Beach Elite" nie ma już
+"BPT" w tytule, a Beach World Series to zupełnie nowa marka, następca Beach
+Pro Tour. Tymczasem pole `Type` się nie zmieniło: Itapema ma `51`, dokładnie jak
+każde "BPT Elite". Nazwa jest jak szyld nad sklepem, który zmienia się przy
+każdym rebrandingu; kod typu jest jak numer w rejestrze, który zostaje.
+
+Reguła "finals" była z kolei za szeroka: miała łapać BPT Finals, a łapała
+każdy finał dowolnego touru (CSVP Finals ma kod `7`).
+
+Dodatkowo lokalna `docs/FIVB-API-Documentation.md` miała zamienione 51 i 53
+(51 = Futures, 53 = Elite16) -- gdyby ktoś zbudował mapę kodów z dokumentacji
+zamiast z danych, pomyliłby Elite z Futures.
+
+### Fix
+- `src/lib/fivb/responseParser.ts`: `TIER_BY_TYPE` sprawdzany przed regułami
+  tekstowymi -- 3 WorldSeries, 4/5 WorldChamps, 51 Elite16, 52 Challenge,
+  53 Futures, 54 Elite16 (Finals zostają w Elite16, bo kalendarz nie ma sekcji
+  Finals). Reguła "finals" usunięta.
+- Nowa kategoria `WorldSeries`: `types.ts`, sekcja w `TournamentTable.tsx`,
+  filtr na `/tournaments`, kolor w `TournamentCard`, ranga w `prominence.ts`.
+- Tabela typów w dokumentacji poprawiona i oznaczona, które kody sprawdzone na
+  danych 2025-2027.
+
+Dowód: przed zmianą Itapema i Dubai wychodziły z parsera jako National/National,
+po -- Elite16/BPT i WorldSeries/BPT; CSVP Finals spadł do National.
+
+### Wzór do zapamiętania / Lekcja
+Klasyfikuj po identyfikatorze, który nadaje system, a nie po tekście, który
+pisze człowiek. Tekst zostaw jako zapas dla kodów, których jeszcze nie znasz.
+I mapę kodów buduj z danych na żywo (zgrupuj cały sezon po `Type`), nie z
+dokumentacji -- tutejsza miała błąd w najważniejszych trzech wierszach.
+
+Do sprawdzenia, gdy przyjdzie sezon 2027: czy Beach World Series ma statystyki
+(wtedy kod `3` do `STATISTIC_TOURNAMENT_TYPES` w `archive.ts`) i jak wygląda
+sekcja "Beach World Series" z prawdziwymi danymi -- dziś strona ładuje tylko
+bieżący sezon, więc nikt jej jeszcze nie widział z wierszami.
