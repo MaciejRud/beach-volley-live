@@ -38,7 +38,7 @@ export class ResponseParser {
           const typeDescription = String(item["@_TypeDescription"] ?? item.TypeDescription ?? "");
           const statusCode = Number(item["@_Status"] ?? item.Status ?? 0);
 
-          const { status, statusText } = this.mapTournamentStatus(statusCode, startDateMain, endDateMain);
+          const { status, statusText } = this.mapTournamentStatus(statusCode, startDate, startDateMain, endDateMain);
           const { tier, circuit } = this.classifyTournament(type, title, typeDescription, code, countryCode);
 
           return {
@@ -376,21 +376,39 @@ export class ResponseParser {
     return Number.isFinite(n) ? n : undefined;
   }
 
-  private static mapTournamentStatus(code: number, startDate?: string, endDate?: string): { status: TournamentStatus; statusText: string } {
+  /**
+   * The VIS Status code is set by hand and often stale in either direction, so
+   * dates override it. firstDay is the qualification start: a tournament in its
+   * qualification rounds is running even though the main draw has not begun.
+   */
+  private static mapTournamentStatus(
+    code: number,
+    firstDay?: string,
+    startDate?: string,
+    endDate?: string
+  ): { status: TournamentStatus; statusText: string } {
     const today = new Date().toISOString().split("T")[0];
+    // One day of grace each way: "today" is UTC, so a final in the Americas runs
+    // past midnight UTC and a first day in Asia begins before it.
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().split("T")[0];
+    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().split("T")[0];
+    const isOver = !!endDate && endDate < yesterday;
 
-    if (code === 0) return { status: "cancelled", statusText: "Cancelled" };
+    // Code 10 is missing from the published enum; across 2024-2026 none of its
+    // 56 tournaments has a finished match and nearly half carry "CANCELLED" in the title.
+    if (code === 0 || code === 10) return { status: "cancelled", statusText: "Cancelled" };
     if (code === 7 || code === 8) return { status: "finished", statusText: "Finished" };
     if (code >= 2 && code <= 6) {
-      // Organisers sometimes never close a tournament in VIS (CEV U20 Euro 2026,
-      // no. 9094, stayed at 6 with every match finished), so an end date in the
-      // past overrides the code. One day of grace: "today" is UTC, and a final in
-      // the Americas runs past midnight UTC.
-      const yesterday = new Date(Date.now() - 86_400_000).toISOString().split("T")[0];
-      if (endDate && endDate < yesterday) return { status: "finished", statusText: "Finished" };
+      // Stale "running" after the end (CEV U20 Euro 2026, no. 9094) and early
+      // "running" before the start (Youth Olympic Games 2026, no. 9530/9531).
+      if (isOver) return { status: "finished", statusText: "Finished" };
+      if (firstDay && firstDay > tomorrow) return { status: "upcoming", statusText: "Upcoming" };
       return { status: "running", statusText: "In Progress" };
     }
     if (code === 1) {
+      // "Open" left in place after the end date (39 such tournaments in 2026,
+      // none with a match in VIS): the date wins, as for a stale "running".
+      if (isOver) return { status: "finished", statusText: "Finished" };
       if (startDate && startDate <= today && (!endDate || endDate >= today)) {
         return { status: "running", statusText: "In Progress" };
       }
