@@ -39,7 +39,7 @@ export class ResponseParser {
           const statusCode = Number(item["@_Status"] ?? item.Status ?? 0);
 
           const { status, statusText } = this.mapTournamentStatus(statusCode, startDateMain, endDateMain);
-          const { tier, circuit } = this.classifyTournament(title, typeDescription, code, countryCode);
+          const { tier, circuit } = this.classifyTournament(type, title, typeDescription, code, countryCode);
 
           return {
             id: no,
@@ -417,24 +417,47 @@ export class ResponseParser {
   }
 
   /**
+   * FIVB tournament type codes with a fixed tier. Finals (54) stay under Elite16,
+   * as the title rules filed them, because the calendar has no Finals section.
+   * Types 4 and 5 are the senior World Championships and the Olympics; youth
+   * events have their own codes and fall through to the title rules.
+   */
+  private static readonly TIER_BY_TYPE: Record<string, TournamentTier> = {
+    "3": "WorldSeries",
+    "4": "WorldChamps",
+    "5": "WorldChamps",
+    "51": "Elite16",
+    "52": "Challenge",
+    "53": "Futures",
+    "54": "Elite16",
+  };
+
+  /**
    * Classifies tournament into Circuit (BPT / CEV / National) and Tier (Elite16 / Challenge / Futures etc.)
    */
   private static classifyTournament(
+    type: string,
     title: string,
     typeDesc: string,
     code: string,
     countryCode: string
   ): { tier: TournamentTier; circuit: TournamentCircuit } {
+    // The type code is set by FIVB and survives rebranding; titles do not.
+    // "Beach Elite Itapema" (2026) is type 51 like every "BPT Elite", but has
+    // no "BPT" in its name, and "Beach World Series" (type 3) is the tour that
+    // replaces the Beach Pro Tour from 2027.
+    const byType = this.TIER_BY_TYPE[type];
+    if (byType) return { tier: byType, circuit: "BPT" };
+
     const combined = `${title} ${typeDesc} ${code}`.toLowerCase();
 
-    // 1. Elite 16 (includes Elite, Elite16, Elite 16, BPT Finals)
+    // 1. Elite 16 (BPT Finals are matched by type 54 above; a bare "finals"
+    // here also caught continental tour finals such as CSVP Finals)
     if (
       combined.includes("elite16") ||
       combined.includes("elite 16") ||
       combined.includes("elite-16") ||
-      combined.includes("bpt elite") ||
-      combined.includes("finals") ||
-      combined.includes("the finals")
+      combined.includes("bpt elite")
     ) {
       return { tier: "Elite16", circuit: "BPT" };
     }

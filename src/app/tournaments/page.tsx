@@ -103,6 +103,7 @@ export default function TournamentsPage() {
             className="bg-black/40 border border-white/10 text-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-400"
           >
             <option value="all">All tiers</option>
+            <option value="WorldSeries">Beach World Series</option>
             <option value="Elite16">Elite 16</option>
             <option value="Challenge">Challenge</option>
             <option value="Futures">Futures</option>

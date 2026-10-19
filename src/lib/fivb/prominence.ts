@@ -46,6 +46,7 @@ export function matchProminenceRank(m: Match): number {
   switch (m.tournamentTier) {
     case "WorldChamps":
       return 0;
+    case "WorldSeries":
     case "Elite16":
       return 1;
     case "Finals":

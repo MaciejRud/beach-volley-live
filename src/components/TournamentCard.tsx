@@ -15,6 +15,7 @@ export function TournamentCard({ tournament }: Props) {
   const isFinished = tournament.status === "finished";
 
   const tierColors: Record<string, string> = {
+    WorldSeries: "from-rose-400 to-red-600 text-red-950 border-rose-400/50",
     Elite16: "from-amber-400 to-yellow-600 text-amber-950 border-amber-400/50",
     Challenge: "from-cyan-400 to-blue-600 text-blue-950 border-cyan-400/50",
     Futures: "from-orange-400 to-amber-700 text-orange-950 border-orange-400/50",

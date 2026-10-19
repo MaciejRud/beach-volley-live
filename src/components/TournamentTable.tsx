@@ -34,6 +34,7 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
   // Live section open by default; calendar sections collapsed
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     running: true,
+    WorldSeries: false,
     Elite16: false,
     Challenge: false,
     Futures: false,
@@ -120,6 +121,9 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
   }, [circuitTournaments, activeCircuit]);
 
   // BPT paired groups by tier
+  const pairedWorldSeries = pairedBPT.filter((p) =>
+    (p.male?.tier === "WorldSeries" || p.female?.tier === "WorldSeries") && !p.isRunning
+  );
   const pairedElite = pairedBPT.filter((p) =>
     (p.male?.tier === "Elite16" || p.female?.tier === "Elite16") && !p.isRunning
   );
@@ -670,6 +674,14 @@ export function TournamentTable({ tournaments, isLoading = false }: Props) {
                   "Live now (LIVE)",
                   pairedRunning,
                   "running"
+                )}
+
+              {/* Beach World Series -- the tour replacing the Beach Pro Tour from 2027 */}
+              {pairedWorldSeries.length > 0 &&
+                renderPairedSection(
+                  "Beach World Series",
+                  pairedWorldSeries,
+                  "WorldSeries"
                 )}
 
               {/* Elite 16 */}

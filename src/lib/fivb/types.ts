@@ -1,6 +1,6 @@
 export type Gender = "M" | "W" | "C";
 
-export type TournamentTier = "Elite16" | "Challenge" | "Futures" | "Finals" | "WorldChamps" | "Continental" | "National" | "Other";
+export type TournamentTier = "WorldSeries" | "Elite16" | "Challenge" | "Futures" | "Finals" | "WorldChamps" | "Continental" | "National" | "Other";
 
 export type TournamentCircuit = "BPT" | "CEV" | "National" | "Other";
 
