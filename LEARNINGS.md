@@ -438,3 +438,48 @@ Do sprawdzenia, gdy przyjdzie sezon 2027: czy Beach World Series ma statystyki
 (wtedy kod `3` do `STATISTIC_TOURNAMENT_TYPES` w `archive.ts`) i jak wygląda
 sekcja "Beach World Series" z prawdziwymi danymi -- dziś strona ładuje tylko
 bieżący sezon, więc nikt jej jeszcze nie widział z wierszami.
+
+## 2026-10-19 -- Lista par z VIS: dokumentacja obiecuje więcej, niż API oddaje
+
+### Problem
+Budując sekcję "Entry list" chciałem oprzeć podział par na polach, które model
+VIS opisuje wprost: `IsInReserve` ("czy para jest w rezerwie"), `StatusText`
+(dlaczego się wycofała), `MainDrawSeed` (rozstawienie). Wszystkie trzy wracają
+**puste** w każdym sprawdzonym turnieju (Montreal 8982, Alanya 9151, Itapema
+9582). Gdyby kod na nich stał, rezerwa byłaby zawsze pusta, a pary z niej
+lądowałyby w "Registered".
+
+### Cause
+Dokumentacja SDK (`Fivb.Vis.Beach.BeachTeam`) opisuje model po stronie FIVB, a
+nie to, co publiczne `GetBeachTeamList` faktycznie serializuje. Pole przyjęte w
+`Fields` nie musi wrócić -- to ten sam wzór co `NoPlayer` w statystykach
+(przyjmowany, nigdy nie zwracany).
+
+Dwie kolejne niespodzianki z tych samych danych:
+- `PositionInReserve` porządkuje rezerwę, ale nie zaczyna się od 1 -- pierwsza
+  rezerwowa para Montrealu ma 24. Wygląda na miejsce w ogólnym rankingu
+  zgłoszeń, nie w kolejce rezerwowej.
+- Futures nie mają `Rank` ani `RankText` w ogóle (Alanya: 0 z 78), choć
+  Elite i Challenge mają.
+
+Co natomiast działa i jest wiarygodne: `Status` (BeachTeamStatus 0-5),
+`Type` (BeachTeamType 0-10), `EntryPoints`, `PositionInEntry`,
+`IsInMainDraw`/`IsInQualification` i pozycje w obu drabinkach. Lista istnieje
+długo przed turniejem (Itapema, -51 dni: 41 par), ale same nazwiska --
+punkty i przydział przychodzą później, według regulaminu ~28 dni przed.
+
+### Fix
+`src/lib/fivb/entryList.ts`: rezerwa rozpoznawana po `PositionInReserve`
+(nie po `IsInReserve`), pokazywana z numeracją 1..n w kolejności tego pola;
+powód wycofania z kodu `Status`, nie z `StatusText`; kolumna miejsca tylko gdy
+jakaś para je ma. Sprawdzone liczbami wyliczonymi niezależnie z surowego XML:
+Montreal 16/12/11/39 (+2 usunięte), Alanya 16/12/20/24 (+6), Itapema 41.
+
+### Wzór do zapamiętania / Lekcja
+Zanim oprzesz logikę na polu z dokumentacji VIS, poproś o nie na dwóch-trzech
+prawdziwych turniejach i policz, ile wierszy ma je niepuste. "Udokumentowane"
+znaczy tu "istnieje w modelu FIVB", nie "dostaniesz je przez API".
+
+Do sprawdzenia po 2026-11-11 (Itapema przekroczy -28 dni): czy i kiedy
+dochodzą punkty wejściowe i przydział -- dziś nie było żadnego turnieju BPT w
+oknie, w którym dałoby się to zobaczyć.
