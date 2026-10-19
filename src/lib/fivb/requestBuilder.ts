@@ -39,7 +39,7 @@
    * which is the only reliable key for attaching statistics to a side.
    */
   static getTeamList(tournamentNo: string | number): string {
-    return `<Request Type="GetBeachTeamList" Fields="No Name FederationCode Status Type EntryPoints PositionInEntry PositionInReserve PositionInMainDraw PositionInQualification IsInMainDraw IsInQualification Rank RankText NoPlayer1 NoPlayer2 Player1FirstName Player1LastName Player2FirstName Player2LastName">
+    return `<Request Type="GetBeachTeamList" Fields="No Name FederationCode Status Type EntryPoints PositionInEntry PositionInReserve PositionInMainDraw PositionInQualification IsInMainDraw IsInQualification NoPlayer1 NoPlayer2 Player1FirstName Player1LastName Player2FirstName Player2LastName">
       <Filter NoTournament="${this.numeric(tournamentNo)}" />
     </Request>`.trim();
   }

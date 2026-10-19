@@ -257,10 +257,6 @@ export class ResponseParser {
           const n = Number(raw ?? 0);
           return n > 0 ? n : undefined;
         };
-        // Rank is negative for no-shows and quota eliminations, so the text is
-        // only kept for a real placing.
-        const rank = Number(item["@_Rank"] ?? item.Rank ?? 0);
-        const rankText = String(item["@_RankText"] ?? item.RankText ?? "");
 
         // Kept apart rather than collapsed into one number: which one to show
         // depends on the round a match belongs to.
@@ -278,7 +274,6 @@ export class ResponseParser {
           entryPoints: positive(item["@_EntryPoints"] ?? item.EntryPoints),
           positionInEntry: positive(item["@_PositionInEntry"] ?? item.PositionInEntry),
           positionInReserve: positive(item["@_PositionInReserve"] ?? item.PositionInReserve),
-          rankText: rank > 0 && rankText ? rankText : undefined,
           player1: this.parsePlayerRef(item, 1),
           player2: this.parsePlayerRef(item, 2),
         });

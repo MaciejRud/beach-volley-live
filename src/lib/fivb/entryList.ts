@@ -33,11 +33,8 @@ export interface EntryRow {
   /** Position within the group: draw position, reserve place or entry rank. */
   position?: number;
   entryPoints?: number;
-  rankText?: string;
   /** Short markers such as "Q" or "WC", each with a tooltip. */
   badges: { label: string; title: string }[];
-  /** Why a withdrawn pair is out ("No show"); only set in the withdrawn group. */
-  reason?: string;
 }
 
 export interface EntryGroup {
@@ -48,14 +45,6 @@ export interface EntryGroup {
 
 const REGISTERED = 0;
 const DELETED = 1;
-
-/** BeachTeamStatus values a withdrawn pair can carry, as the SDK names them. */
-const WITHDRAWAL_REASONS: Record<number, string> = {
-  2: "Withdrawn",
-  3: "Withdrawn (medical)",
-  4: "Late withdrawal",
-  5: "No show",
-};
 
 /**
  * BeachTeamType values worth a marker. Normal (0) and Reserve (4) say nothing
@@ -128,20 +117,29 @@ function toRow(key: EntryGroupKey, entry: TeamEntry, linkable: ReadonlySet<strin
     ),
     position: positionIn(key, entry),
     entryPoints: entry.entryPoints,
-    rankText: entry.rankText,
     badges,
-    // An undocumented status still lands here rather than vanishing, labelled
-    // with its raw code so the gap is visible.
-    reason: key === "withdrawn" ? WITHDRAWAL_REASONS[entry.status] ?? `Status ${entry.status}` : undefined,
   };
 }
 
-/** Rows with a position first, in order; the rest alphabetically. */
+/** The pair as the page prints it: "Lastname Firstname / Lastname Firstname". */
+function displayName(row: EntryRow): string {
+  return row.players.length > 0 ? row.players.map((p) => p.name).join(" / ") : row.name;
+}
+
+/**
+ * Rows with a position first, in order. The rest -- a provisional list, the
+ * withdrawn -- by federation code, then by the names on screen, the order the
+ * player directory uses. Sorting on FIVB's own team name ("Cherif/Ahmed") put
+ * pairs where their printed names did not explain.
+ */
 function compareRows(a: EntryRow, b: EntryRow): number {
   if (a.position !== undefined && b.position !== undefined) return a.position - b.position;
   if (a.position !== undefined) return -1;
   if (b.position !== undefined) return 1;
-  return a.name.localeCompare(b.name, "en");
+  return (
+    a.federationCode.localeCompare(b.federationCode, "en") ||
+    displayName(a).localeCompare(displayName(b), "en")
+  );
 }
 
 /**

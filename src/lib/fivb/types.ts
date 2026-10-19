@@ -107,8 +107,6 @@ export interface TeamEntry {
   positionInEntry?: number;
   /** Place on the reserve list, for a pair that got into neither draw. */
   positionInReserve?: number;
-  /** Final placing ("5", "9"); absent before the end and for Futures. */
-  rankText?: string;
   player1?: PlayerRef;
   player2?: PlayerRef;
 }
