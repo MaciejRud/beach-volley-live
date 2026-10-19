@@ -522,3 +522,46 @@ Ręcznie ustawiany status jest nieaktualny w obie strony, więc data musi go
 ograniczać z obu końców, nie tylko z jednego. Naprawiając jedną stronę,
 sprawdź od razu drugą -- 09-26 by to wyłapało. Zostają kody `9` i `11`
 (2025: 2 i 6 turniejów), które dalej dają `unknown`.
+
+## 2026-10-19 -- Punkty wejściowe FIVB: reszta po backteście to nie "dane spoza VIS"
+
+### Problem
+Backtest punktów wejściowych Montrealu stanął na 128/148 i zapisałem resztę jako
+"brakujące wyniki spoza VIS". Właściciel zapytał "czemu Montrealu nie możesz
+ogarnąć wciąż?" i podsunął ciążę jako przyczynę u Kropidłowskiej. Okazało się,
+że wszystkie trzy "zewnętrzne" przyczyny były moje:
+
+1. **Zła interpretacja reguły.** "Wyniki z innych turniejów liczą się tylko gdy
+   poprawiają" wstawiałem do czwórki "4 ostatnich", przez co wypychały wynik
+   obowiązkowy. FIVB stawia je *obok* czwórki: 3 najlepsze z (4 ostatnie BPT +
+   każdy wynik nieobowiązkowy od najstarszego z nich). 128 -> 144/148.
+2. **Filtr skryptu.** Odrzucałem wiersze bez flag drabinki, a toury strefowe
+   dają punkty właśnie takim (WEVZA Modena: 108 pkt, `IsInMainDraw=0`,
+   `IsInQualification=0`). Fiedlera opisałem jako "turniej krajowy spoza VIS" --
+   był w moim cache, tylko go wyciąłem.
+3. **Kod kraju.** Bridlington ma w VIS `01`, a Bialokoz/Batrane grają jako `ENG`
+   -- to dla nich Futures u siebie.
+
+Kropidłowska to rzeczywiście ochrona po urlopie macierzyńskim (SOM s. 24), ale
+inna niż zakładałem: nie jej punkty sprzed przerwy (580), tylko punkty osoby
+stojącej dziś na jej dawnej *pozycji* rankingu (628 = miejsca 142-143).
+
+### Cause
+Reszta miała widoczny wzór, którego nie przeczytałem: oboje partnerzy w parze
+mieli identyczny niedobór (-40/-40, -54/-54) -- czyli brakował turnieju, który
+grali razem, a nie "czegoś spoza". Przyczynę zewnętrzną przypisałem bez
+wypisania wierszy, które sam miernik odrzucił, i bez przeczytania SOM, który
+leżał w `Beach-tournament-platform/docs/reference/fivb/`.
+
+### Fix
+`scripts/research/entry-points-backtest.ts`: `entryPoints` liczy nieobowiązkowe
+obok czwórki; wiersz z punktami > 0 jest wynikiem bez względu na flagi;
+`HOST_OVERRIDES` dla 9039. Wynik: 831/840 na 7 turniejach, reszta to punkty
+chronione i +2..+8 w turniejach krajowych (`docs/PLAN-ZGLOSZONE-PARY.md`).
+
+### Wzór do zapamiętania / Lekcja
+Rozbieżność w backteście najpierw przypisuj miernikowi, dopiero potem światu:
+wypisz *wszystkie* wiersze przypadku, łącznie z tymi, które filtr wyrzucił, i
+przeczytaj regułę u źródła. "Nie ma tego w danych" wolno napisać dopiero, gdy
+zapytanie po samym zawodniku (`GetBeachTeamList` + `<Filter NoPlayer=".."/>`)
+też nic nie zwraca. Równe niedobory u obu partnerów = brakujący wspólny turniej.

@@ -166,7 +166,13 @@ FIVB API reference: docs/FIVB-API-Documentation.md   (LOCAL - read this first!)
 VIS SDK overview:   https://www.fivb.org/Vissdk/#VisSdk.html
 VIS Web Service:    https://www.fivb.org/VisSDK/VisWebService/#Introduction.html
 Data model:         https://www.fivb.org/VisSDK/Fivb.Vis.Model/#Fivb.Vis.Model.html
+FIVB rules (SOM):   C:/Users/mrudo/Workspace/Beach-tournament-platform/docs/reference/fivb/fivb-extract.md
 ```
+
+Rule questions -- entry and seeding points, ranking, maternity / injury protection,
+quotas, wild cards -- are checked in the SOM extract before a mismatch is blamed on
+data missing from VIS (2026-10-19: the maternity rule explaining a backtest gap was
+on disk while the gap was written off as "outside VIS").
 
 > **WARNING:** The external links are JavaScript-rendered - content will not load
 > via plain fetch. Always prefer the local doc.
